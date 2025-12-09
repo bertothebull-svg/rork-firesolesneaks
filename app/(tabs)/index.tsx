@@ -1,0 +1,877 @@
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { Shirt, Package, Sparkles, Trash2, Edit, Plus, Trash, Filter, X } from "lucide-react-native";
+import { useState, useMemo } from "react";
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useWardrobe, useWardrobeStats } from "../../contexts/WardrobeContext";
+import { COLORS } from "../../constants/styles";
+import type { ItemCategory, TopSubtype, BottomSubtype, OutfitStyle, Season } from "../../types/wardrobe";
+
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = (width - 56) / 3;
+
+export default function WardrobeScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { items, sneakers, tops, bottoms, hats, deleteItem, deleteAllItems } = useWardrobe();
+  const stats = useWardrobeStats();
+  const [selectedCategory, setSelectedCategory] = useState<"all" | ItemCategory>("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedSubtypes, setSelectedSubtypes] = useState<string[]>([]);
+  const [selectedSeasons, setSelectedSeasons] = useState<Season[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<OutfitStyle[]>([]);
+
+  const filteredItems = useMemo(() => {
+    let result = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
+
+    if (selectedBrands.length > 0) {
+      result = result.filter(item => 
+        item.brand && selectedBrands.includes(item.brand)
+      );
+    }
+
+    if (selectedSubtypes.length > 0) {
+      result = result.filter(item => 
+        item.subtype && selectedSubtypes.includes(item.subtype)
+      );
+    }
+
+    if (selectedSeasons.length > 0) {
+      result = result.filter(item => 
+        item.seasons && item.seasons.some(season => selectedSeasons.includes(season))
+      );
+    }
+
+    if (selectedStyles.length > 0) {
+      result = result.filter(item => 
+        item.outfitStyles && item.outfitStyles.some(style => selectedStyles.includes(style))
+      );
+    }
+
+    return result;
+  }, [items, selectedCategory, selectedBrands, selectedSubtypes, selectedSeasons, selectedStyles]);
+
+  const availableBrands = useMemo(() => {
+    const brandSet = new Set<string>();
+    const categoryItems = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
+    categoryItems.forEach(item => {
+      if (item.brand) brandSet.add(item.brand);
+    });
+    return Array.from(brandSet).sort();
+  }, [items, selectedCategory]);
+
+  const availableSubtypes = useMemo(() => {
+    const subtypeSet = new Set<string>();
+    const categoryItems = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
+    categoryItems.forEach(item => {
+      if (item.subtype) subtypeSet.add(item.subtype);
+    });
+    return Array.from(subtypeSet).sort();
+  }, [items, selectedCategory]);
+
+  const availableSeasons = useMemo(() => {
+    const seasonSet = new Set<Season>();
+    const categoryItems = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
+    categoryItems.forEach(item => {
+      if (item.seasons) item.seasons.forEach(season => seasonSet.add(season));
+    });
+    return Array.from(seasonSet).sort();
+  }, [items, selectedCategory]);
+
+  const availableStyles = useMemo(() => {
+    const styleSet = new Set<OutfitStyle>();
+    const categoryItems = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
+    categoryItems.forEach(item => {
+      if (item.outfitStyles) item.outfitStyles.forEach(style => styleSet.add(style));
+    });
+    return Array.from(styleSet).sort();
+  }, [items, selectedCategory]);
+
+  const activeFiltersCount = selectedBrands.length + selectedSubtypes.length + selectedSeasons.length + selectedStyles.length;
+
+  const clearAllFilters = () => {
+    setSelectedBrands([]);
+    setSelectedSubtypes([]);
+    setSelectedSeasons([]);
+    setSelectedStyles([]);
+  };
+
+  const toggleBrand = (brand: string) => {
+    setSelectedBrands(prev => 
+      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+    );
+  };
+
+  const toggleSubtype = (subtype: string) => {
+    setSelectedSubtypes(prev => 
+      prev.includes(subtype) ? prev.filter(s => s !== subtype) : [...prev, subtype]
+    );
+  };
+
+  const toggleSeason = (season: Season) => {
+    setSelectedSeasons(prev => 
+      prev.includes(season) ? prev.filter(s => s !== season) : [...prev, season]
+    );
+  };
+
+  const toggleStyle = (style: OutfitStyle) => {
+    setSelectedStyles(prev => 
+      prev.includes(style) ? prev.filter(s => s !== style) : [...prev, style]
+    );
+  };
+
+  const groupedByBrand = useMemo(() => {
+    const groups: { [key: string]: typeof filteredItems } = {};
+    
+    filteredItems.forEach(item => {
+      const brand = item.brand || "No Brand";
+      if (!groups[brand]) {
+        groups[brand] = [];
+      }
+      groups[brand].push(item);
+    });
+    
+    const sortedBrands = Object.keys(groups).sort((a, b) => {
+      if (a === "No Brand") return 1;
+      if (b === "No Brand") return -1;
+      return a.localeCompare(b);
+    });
+    
+    const subtypeOrder: { [key: string]: number } = {
+      tshirt: 1,
+      polo: 2,
+      buttondown: 3,
+      sweatshirt: 4,
+      outerwear: 5,
+      jeans: 6,
+      dressslacks: 7,
+      sweatpants: 8,
+      shorts: 9,
+      gymshorts: 10,
+    };
+    
+    return sortedBrands.map(brand => ({
+      brand,
+      items: groups[brand].sort((a, b) => {
+        const aSubtype = a.subtype || 'zzz';
+        const bSubtype = b.subtype || 'zzz';
+        const aOrder = subtypeOrder[aSubtype] || 999;
+        const bOrder = subtypeOrder[bSubtype] || 999;
+        
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        
+        return (a.name || '').localeCompare(b.name || '');
+      })
+    }));
+  }, [filteredItems]);
+
+  const categories = [
+    { id: "all" as const, label: "All", count: items.length, icon: Package },
+    { id: "sneaker" as const, label: "Sneakers", count: sneakers.length, icon: Package },
+    { id: "top" as const, label: "Tops", count: tops.length, icon: Shirt },
+    { id: "bottom" as const, label: "Bottoms", count: bottoms.length, icon: Shirt },
+    { id: "hat" as const, label: "Hats", count: hats.length, icon: Package },
+  ];
+
+  return (
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>Setting your sole on Fire</Text>
+            <Text style={styles.subtitle}>{stats.totalItems} items</Text>
+          </View>
+          <View style={styles.headerButtons}>
+            {items.length > 0 && (
+              <TouchableOpacity 
+                style={styles.deleteAllButton}
+                onPress={() => {
+                  Alert.alert(
+                    "Delete All Items",
+                    `Are you sure you want to delete all ${items.length} item${items.length === 1 ? '' : 's'}? This action cannot be undone.`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { 
+                        text: "Delete All", 
+                        style: "destructive",
+                        onPress: () => deleteAllItems(),
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Trash size={18} color={COLORS.error} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity 
+              style={[styles.filterButton, activeFiltersCount > 0 && styles.filterButtonActive]}
+              onPress={() => setShowFilters(!showFilters)}
+            >
+              <Filter size={18} color={activeFiltersCount > 0 ? "#FFF" : COLORS.text} />
+              {activeFiltersCount > 0 && (
+                <View style={styles.filterBadge}>
+                  <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.aiButton}
+              onPress={() => router.push("/generator")}
+            >
+              <Sparkles size={20} color="#FFF" />
+              <Text style={styles.aiButtonText}>AI Outfits</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statValue}>
+              ${stats.totalValue.toLocaleString()}
+            </Text>
+            <Text style={styles.statLabel}>Market Value</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={[styles.statValue, { color: stats.profit >= 0 ? COLORS.success : COLORS.error }]}>
+              ${Math.abs(stats.profit).toLocaleString()}
+            </Text>
+            <Text style={styles.statLabel}>{stats.profit >= 0 ? "Profit" : "Loss"}</Text>
+          </View>
+        </View>
+
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryScrollContent}
+        >
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const isSelected = selectedCategory === cat.id;
+            return (
+              <TouchableOpacity
+                key={cat.id}
+                style={[styles.categoryButton, isSelected && styles.categoryButtonActive]}
+                onPress={() => setSelectedCategory(cat.id)}
+              >
+                <Icon size={20} color={isSelected ? "#FFF" : COLORS.text} />
+                <Text style={[styles.categoryButtonText, isSelected && styles.categoryButtonTextActive]}>
+                  {cat.label}
+                </Text>
+                <View style={[styles.categoryBadge, isSelected && styles.categoryBadgeActive]}>
+                  <Text style={[styles.categoryBadgeText, isSelected && styles.categoryBadgeTextActive]}>
+                    {cat.count}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {showFilters && (
+          <View style={styles.filtersContainer}>
+            <View style={styles.filtersHeader}>
+              <Text style={styles.filtersTitle}>Filters</Text>
+              {activeFiltersCount > 0 && (
+                <TouchableOpacity onPress={clearAllFilters}>
+                  <Text style={styles.clearFiltersText}>Clear All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {availableBrands.length > 0 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Brands</Text>
+                <View style={styles.filterChips}>
+                  {availableBrands.map(brand => (
+                    <TouchableOpacity
+                      key={brand}
+                      style={[
+                        styles.filterChip,
+                        selectedBrands.includes(brand) && styles.filterChipActive
+                      ]}
+                      onPress={() => toggleBrand(brand)}
+                    >
+                      <Text style={[
+                        styles.filterChipText,
+                        selectedBrands.includes(brand) && styles.filterChipTextActive
+                      ]}>
+                        {brand}
+                      </Text>
+                      {selectedBrands.includes(brand) && (
+                        <X size={14} color="#FFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {availableSubtypes.length > 0 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Garment Type</Text>
+                <View style={styles.filterChips}>
+                  {availableSubtypes.map(subtype => (
+                    <TouchableOpacity
+                      key={subtype}
+                      style={[
+                        styles.filterChip,
+                        selectedSubtypes.includes(subtype) && styles.filterChipActive
+                      ]}
+                      onPress={() => toggleSubtype(subtype)}
+                    >
+                      <Text style={[
+                        styles.filterChipText,
+                        selectedSubtypes.includes(subtype) && styles.filterChipTextActive
+                      ]}>
+                        {subtype}
+                      </Text>
+                      {selectedSubtypes.includes(subtype) && (
+                        <X size={14} color="#FFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {availableSeasons.length > 0 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Seasons</Text>
+                <View style={styles.filterChips}>
+                  {availableSeasons.map(season => (
+                    <TouchableOpacity
+                      key={season}
+                      style={[
+                        styles.filterChip,
+                        selectedSeasons.includes(season) && styles.filterChipActive
+                      ]}
+                      onPress={() => toggleSeason(season)}
+                    >
+                      <Text style={[
+                        styles.filterChipText,
+                        selectedSeasons.includes(season) && styles.filterChipTextActive
+                      ]}>
+                        {season}
+                      </Text>
+                      {selectedSeasons.includes(season) && (
+                        <X size={14} color="#FFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {availableStyles.length > 0 && (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Outfit Styles</Text>
+                <View style={styles.filterChips}>
+                  {availableStyles.map(style => (
+                    <TouchableOpacity
+                      key={style}
+                      style={[
+                        styles.filterChip,
+                        selectedStyles.includes(style) && styles.filterChipActive
+                      ]}
+                      onPress={() => toggleStyle(style)}
+                    >
+                      <Text style={[
+                        styles.filterChipText,
+                        selectedStyles.includes(style) && styles.filterChipTextActive
+                      ]}>
+                        {style}
+                      </Text>
+                      {selectedStyles.includes(style) && (
+                        <X size={14} color="#FFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {filteredItems.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Package size={64} color={COLORS.border} />
+            <Text style={styles.emptyTitle}>No items yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Start building your wardrobe by adding your first item
+            </Text>
+            <TouchableOpacity 
+              style={styles.addButton}
+              onPress={() => router.push("/add")}
+            >
+              <Text style={styles.addButtonText}>Add Item</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.sectionsContainer}>
+            {groupedByBrand.map((group) => (
+              <View key={group.brand} style={styles.brandSection}>
+                <Text style={styles.brandHeader}>{group.brand}</Text>
+                <View style={styles.grid}>
+                  {group.items.map((item) => (
+            <TouchableOpacity 
+              key={item.id} 
+              style={styles.card}
+              onPress={() => {
+                router.push({
+                  pathname: "/add" as any,
+                  params: { editId: item.id as string },
+                });
+              }}
+            >
+              <Image
+                source={{ uri: item.imageUrl }}
+                style={styles.cardImage}
+                contentFit="cover"
+                placeholder={require("../../assets/images/icon.png")}
+                placeholderContentFit="contain"
+                transition={200}
+                cachePolicy="memory-disk"
+                onError={(error) => {
+                  console.error("[Card Image Error]", item.id, item.imageUrl, error);
+                }}
+                onLoad={() => {
+                  console.log("[Card Image Loaded]", item.id);
+                }}
+              />
+              <View style={styles.cardOverlay}>
+                <TouchableOpacity 
+                  style={styles.cardActionButton}
+                  onPress={() => {
+                    router.push({
+                      pathname: "/add" as any,
+                      params: { editId: item.id as string },
+                    });
+                  }}
+                >
+                  <Edit size={14} color="#FFF" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.cardActionButton}
+                  onPress={() => {
+                    Alert.alert(
+                      "Delete Item",
+                      `Are you sure you want to delete "${item.name}"?`,
+                      [
+                        { text: "Cancel", style: "cancel" },
+                        { 
+                          text: "Delete", 
+                          style: "destructive",
+                          onPress: () => deleteItem(item.id),
+                        },
+                      ]
+                    );
+                  }}
+                >
+                  <Trash2 size={14} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                {item.brand && (
+                  <Text style={styles.cardBrand} numberOfLines={1}>
+                    {item.brand}
+                  </Text>
+                )}
+                <View style={styles.cardFooter}>
+                  <Text style={styles.cardPrice}>
+                    {item.marketValue ? `${item.marketValue}` : "-"}
+                  </Text>
+                  <View style={[
+                    styles.categoryChip,
+                    item.category === "sneaker" && { backgroundColor: "#FF6B35" },
+                    item.category === "top" && { backgroundColor: "#4ECDC4" },
+                    item.category === "bottom" && { backgroundColor: "#95E1D3" },
+                    item.category === "hat" && { backgroundColor: "#FFB84D" },
+                  ]}>
+                    <Text style={styles.categoryChipText}>
+                      {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+      <TouchableOpacity
+        style={[styles.fab, { bottom: insets.bottom + 24 }]}
+        onPress={() => {
+          router.push({
+            pathname: "/add" as any,
+            params: selectedCategory !== "all" ? { category: selectedCategory as string } : {},
+          });
+        }}
+      >
+        <Plus size={28} color="#FFF" strokeWidth={2.5} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  deleteAllButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  filterButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    position: "relative" as const,
+  },
+  filterButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterBadge: {
+    position: "absolute" as const,
+    top: -4,
+    right: -4,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  filterBadgeText: {
+    fontSize: 11,
+    fontWeight: "700" as const,
+    color: "#FFF",
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: "800" as const,
+    color: COLORS.text,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  aiButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    gap: 6,
+  },
+  aiButtonText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600" as const,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    gap: 12,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: 16,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  categoryScroll: {
+    marginBottom: 20,
+  },
+  categoryScrollContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  categoryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+    marginRight: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  categoryButtonText: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+  },
+  categoryButtonTextActive: {
+    color: "#FFF",
+  },
+  categoryBadge: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 24,
+    alignItems: "center",
+  },
+  categoryBadgeActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+  categoryBadgeText: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+  },
+  categoryBadgeTextActive: {
+    color: "#FFF",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: COLORS.textSecondary,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 22,
+  },
+  addButton: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 24,
+  },
+  addButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "600" as const,
+  },
+  sectionsContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
+  brandSection: {
+    marginBottom: 24,
+  },
+  brandHeader: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  card: {
+    width: CARD_WIDTH,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    position: "relative",
+  },
+  cardImage: {
+    width: "100%",
+    height: CARD_WIDTH * 1.15,
+    backgroundColor: COLORS.surface,
+  },
+  cardContent: {
+    padding: 6,
+  },
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+  },
+  cardBrand: {
+    fontSize: 10,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  cardPrice: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  categoryChip: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  categoryChipText: {
+    fontSize: 10,
+  },
+  cardOverlay: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    flexDirection: "row",
+    gap: 6,
+  },
+  cardActionButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  filtersContainer: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    padding: 16,
+  },
+  filtersHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  filtersTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  clearFiltersText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: COLORS.primary,
+  },
+  filterSection: {
+    marginBottom: 16,
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: COLORS.textSecondary,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  filterChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    gap: 6,
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+    textTransform: "capitalize" as const,
+  },
+  filterChipTextActive: {
+    color: "#FFF",
+  },
+});
