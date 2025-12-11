@@ -182,13 +182,16 @@ export default function AddItemScreen() {
         "goat.com",
         "flightclub.com",
         "stadiumgoods.com",
-        "sneakernews.com"
+        "sneakernews.com",
+        "nike.com",
+        "adidas.com",
+        "newbalance.com"
       ];
       
       const siteRestriction = prioritySites.map(site => `site:${site}`).join(" OR ");
-      const refinedQuery = `${searchQuery} product (${siteRestriction})`;
+      const refinedQuery = `${searchQuery} sneaker product image (${siteRestriction})`;
       
-      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(refinedQuery)}&searchType=image&num=10&imgSize=large&imgType=photo`;
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(refinedQuery)}&searchType=image&num=10&imgSize=large&imgType=photo&safe=off`;
       
       console.log("[Google Image Search] Refined query:", refinedQuery);
       console.log("[Google Image Search] Fetching from Google Custom Search API...");
@@ -212,15 +215,27 @@ export default function AddItemScreen() {
         if (!data.items || data.items.length === 0) {
           console.log("[Google Image Search] No results with site restriction, trying broader search");
           
-          const broadSearchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(searchQuery + " sneaker product")}&searchType=image&num=10&imgSize=large&imgType=photo`;
-          const broadResponse = await fetch(broadSearchUrl);
+          const searches = [
+            `${searchQuery} official product image`,
+            `${searchQuery} sneaker stockx`,
+            `${searchQuery} sneaker goat`,
+            `${searchQuery} product photo`
+          ];
           
-          if (broadResponse.ok) {
-            const broadData = await broadResponse.json();
-            if (broadData.items && broadData.items.length > 0) {
-              console.log("[Google Image Search] Found", broadData.items.length, "results with broader search");
-              return broadData.items[0].link;
+          for (const query of searches) {
+            console.log("[Google Image Search] Trying fallback:", query);
+            const fallbackUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}&searchType=image&num=5&imgSize=large&imgType=photo`;
+            const fallbackResponse = await fetch(fallbackUrl);
+            
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json();
+              if (fallbackData.items && fallbackData.items.length > 0) {
+                console.log("[Google Image Search] Found", fallbackData.items.length, "results with fallback:", query);
+                return fallbackData.items[0].link;
+              }
             }
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
           
           throw new Error("No images found for this sneaker");
@@ -266,17 +281,24 @@ export default function AddItemScreen() {
     mutationFn: async (sneakerName: string) => {
       console.log("[Sneaker Search] Starting search for:", sneakerName);
       
-      const searchPrompt = `You are a sneaker expert with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL databases.
+      const searchPrompt = `You are an elite sneaker identification expert with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL databases.
 
 SEARCH QUERY: "${sneakerName}"
 
 YOUR MISSION:
-1. Find the EXACT shoe as it appears on major sneaker marketplaces
-2. Use complete, official product names from GOAT.com, StockX.com, Poison.com, SneakerFreaker.com, and NYKL.com
-3. Match the official SKU/Style Code whenever possible
-4. Include all relevant colorway details and release information
+1. Find the EXACT shoe model with 100% accuracy
+2. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com
+3. Match the official SKU/Style Code whenever possible (THIS IS CRITICAL FOR IMAGE SEARCH)
+4. Include all relevant colorway details with official names
 5. Provide accurate market pricing data
-6. Provide the EXACT search query to find product images
+6. Create the MOST SPECIFIC search query possible for finding the exact shoe image
+
+CRITICAL: The imageSearchQuery MUST include:
+- Full official brand name (Nike, Air Jordan, Adidas, etc.)
+- Complete model name with all details
+- Official colorway name (not generic colors)
+- SKU/Style Code if identifiable
+- Year if it helps distinguish between releases
 
 EXPANDED SEARCH STRATEGY:
 - Check abbreviations against full official names (e.g., "bred 11" = "Air Jordan 11 Retro 'Bred'")
@@ -314,7 +336,7 @@ Provide information in this exact JSON format:
   "silhouette": "base model family (e.g. Air Jordan 1 High, Dunk Low, Yeezy 350 V2)",
   "style": "nickname or popular name",
   "styleCode": "official SKU/Style Code (critical for accuracy)",
-  "imageSearchQuery": "CRITICAL: exact query for Google Image Search - MUST include: Brand + Full Model Name + Exact Colorway + SKU/Style Code. Example: 'Nike Air Jordan 1 Retro High OG University Blue 555088-134'",
+  "imageSearchQuery": "CRITICAL: The MOST SPECIFIC search query for Google Image Search. MUST include ALL of: Brand + Full Model Name + Official Colorway Name + SKU/Style Code. This must be SO SPECIFIC that it returns ONLY this exact shoe. Example: 'Air Jordan 1 Retro High OG University Blue 555088-134' or 'Nike Dunk Low Black White Panda DD1391-100'. DO NOT use generic terms like 'sneaker' or 'shoe' - use the exact official product listing name.",
   "retailPrice": "original retail price USD (number only)",
   "marketValue": "current average resale price USD (number only)",
   "releaseYear": "year of release",
