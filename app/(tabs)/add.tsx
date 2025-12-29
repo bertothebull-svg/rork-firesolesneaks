@@ -484,6 +484,7 @@ Return ONLY the JSON object.`;
       if (result.marketValue) setMarketValue(result.marketValue);
       if (result.retailPrice) setPurchasePrice(result.retailPrice);
 
+      let imageFound = false;
       if (result.imageSearchQuery) {
         console.log("[Sneaker Search] Fetching real image with query:", result.imageSearchQuery);
         
@@ -494,7 +495,6 @@ Return ONLY the JSON object.`;
           `${result.brand} ${result.style || result.colorway}`.trim(),
         ].filter((q, i, arr) => arr.indexOf(q) === i);
         
-        let imageFound = false;
         for (const query of fallbackQueries) {
           try {
             console.log("[Sneaker Search] Trying image query:", query);
@@ -511,11 +511,7 @@ Return ONLY the JSON object.`;
         }
         
         if (!imageFound) {
-          console.error("[Sneaker Search] All image queries failed");
-          Alert.alert(
-            "Image Not Found",
-            "Could not find a product image online. Please add your own photo using the Camera or Library button."
-          );
+          console.log("[Sneaker Search] Product image not found online");
         }
       }
 
@@ -525,13 +521,11 @@ Return ONLY the JSON object.`;
         output: result
       });
       
-      const successMessage = imageUri 
-        ? `✅ Found: ${result.brand || ""} ${result.model || ""}\n\nInformation and image loaded from online sources.${result.confidence ? `\n\nConfidence: ${result.confidence.toUpperCase()}` : ""}` 
-        : `✅ Found: ${result.brand || ""} ${result.model || ""}\n\nInformation auto-filled but could not find product image. Please add your own photo.`;
+      const successMessage = `✅ Found: ${result.brand || ""} ${result.model || ""}\n\nDetails loaded from sneaker databases.${result.confidence ? `\n\nConfidence: ${result.confidence.toUpperCase()}` : ""}`;
       
       Alert.alert(
-        "Details Loaded", 
-        successMessage,
+        "Search Complete", 
+        successMessage + (imageFound ? "\n\nProduct image loaded." : "\n\nCouldn't find product image - please use Camera or Library to add your own photo."),
         [
           {
             text: "OK",
@@ -847,7 +841,6 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       console.log("[Shoe Identification] Search Query for verification:", result.searchQuery);
       
       let hasIdentified = false;
-      let shouldCrossReference = false;
 
       if (data.brand && data.brand !== "Unknown" && data.brand.toLowerCase() !== "unknown") {
         setBrand(data.brand);
@@ -903,11 +896,6 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
         setNotes(currentNotes + separator + `Key Features: ${result.distinguishingFeatures}`);
       }
       
-      if (data.confidence === "medium" || data.confidence === "low") {
-        shouldCrossReference = true;
-        console.log("[Shoe Identification] Medium/Low confidence detected. Will cross-reference with database search.");
-      }
-      
       if (!hasIdentified) {
         if (retryCount < 2) {
           console.log("[Shoe Identification] No data extracted, retrying...");
@@ -929,7 +917,7 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       });
       
       const confidenceEmoji = data.confidence === "high" ? "🎯" : data.confidence === "medium" ? "👍" : "🤔";
-      let message = `${confidenceEmoji} Identified!\n\n${data.brand || "?"} ${data.model || "?"}\n\nReview the details below and adjust if needed.`;
+      let message = `${confidenceEmoji} Identified from Photo!\n\n${data.brand || "?"} ${data.model || "?"}\n\nReview the details below and adjust if needed.`;
       
       if (data.confidence) {
         message += `\n\nConfidence: ${data.confidence.toUpperCase()}`;
@@ -938,100 +926,10 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
         }
       }
       
-      if (shouldCrossReference && result.searchQuery) {
-        console.log("[Shoe Identification] Starting database cross-reference with query:", result.searchQuery);
-        message += `\n\n🔍 Verifying with online databases...`;
-        
-        Alert.alert(
-          "Shoe Identified! 👟", 
-          message
-        );
-        
-        try {
-          console.log("[Shoe Identification] Cross-referencing with sneaker databases...");
-          const searchResult = await sneakerSearchMutation.mutateAsync(result.searchQuery || `${data.brand} ${data.model} ${data.colorway}`);
-          
-          console.log("[Shoe Identification] Cross-reference complete:", searchResult);
-          
-          if (searchResult.brand) setBrand(searchResult.brand);
-          if (searchResult.model) setName(searchResult.model);
-          if (searchResult.silhouette) setSilhouette(searchResult.silhouette);
-          if (searchResult.style) setStyle(searchResult.style);
-          if (searchResult.colorway) {
-            setMainColors([searchResult.colorway]);
-          }
-          if (searchResult.styleCode) {
-            const existingNotes = notes || "";
-            if (!existingNotes.includes(searchResult.styleCode)) {
-              const separator = existingNotes ? "\n\n" : "";
-              setNotes(existingNotes + separator + `Verified Style Code: ${searchResult.styleCode}`);
-            }
-          }
-          if (searchResult.marketValue) setMarketValue(searchResult.marketValue);
-          if (searchResult.retailPrice) setPurchasePrice(searchResult.retailPrice);
-          
-          if (searchResult.imageSearchQuery) {
-            try {
-              console.log("[Shoe Identification] Fetching verified product image...");
-              const verifiedImage = await searchRealImageMutation.mutateAsync(searchResult.imageSearchQuery);
-              setImageUri(verifiedImage);
-              setImageError(false);
-              console.log("[Shoe Identification] Verified image loaded successfully");
-              
-              Alert.alert(
-                "✅ Verification Complete",
-                `Cross-referenced with ${searchResult.sources || "major databases"}.\n\nConfidence upgraded! Details and verified image loaded.`,
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      setTimeout(() => {
-                        setShowAccuracyRating(true);
-                      }, 500);
-                    }
-                  }
-                ]
-              );
-            } catch (imgError) {
-              console.error("[Shoe Identification] Failed to load verified image:", imgError);
-              Alert.alert(
-                "✅ Verification Complete",
-                `Cross-referenced with databases. Details updated but keeping your original photo.`,
-                [
-                  {
-                    text: "OK",
-                    onPress: () => {
-                      setTimeout(() => {
-                        setShowAccuracyRating(true);
-                      }, 500);
-                    }
-                  }
-                ]
-              );
-            }
-          }
-        } catch (crossRefError) {
-          console.error("[Shoe Identification] Cross-reference failed:", crossRefError);
-          Alert.alert(
-            "Photo Analysis Complete",
-            "Identified from photo but couldn't verify with databases. Please review details carefully.",
-            [
-              {
-                text: "OK",
-                onPress: () => {
-                  setTimeout(() => {
-                    setShowAccuracyRating(true);
-                  }, 500);
-                }
-              }
-            ]
-          );
-        }
-        return true;
-      }
+      console.log("[Shoe Identification] Photo identification complete. Keeping user's original photo.");
       
       Alert.alert(
-        "Shoe Identified! 👟", 
+        "Photo Analysis Complete 👟", 
         message,
         [
           {
