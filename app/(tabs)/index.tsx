@@ -6,7 +6,7 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, Alert
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useWardrobe, useWardrobeStats } from "../../contexts/WardrobeContext";
 import { COLORS } from "../../constants/styles";
-import type { ItemCategory, TopSubtype, BottomSubtype, OutfitStyle, Season } from "../../types/wardrobe";
+import type { ItemCategory, OutfitStyle, Season } from "../../types/wardrobe";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = (width - 56) / 3;
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   headerButtons: {
     flexDirection: "row",
@@ -585,15 +585,15 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   title: {
-    fontSize: 32,
-    fontWeight: "800" as const,
+    fontSize: 28,
+    fontWeight: "700" as const,
     color: COLORS.text,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   aiButton: {
     flexDirection: "row",
@@ -611,48 +611,48 @@ const styles = StyleSheet.create({
   },
   statsContainer: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
     paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
     backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 12,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: "700" as const,
+    fontSize: 20,
+    fontWeight: "600" as const,
     color: COLORS.text,
   },
   statLabel: {
-    fontSize: 13,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   categoryScroll: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   categoryScrollContent: {
     paddingHorizontal: 20,
-    gap: 8,
+    gap: 6,
   },
   categoryButton: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.surface,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    gap: 8,
-    marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+    marginRight: 6,
   },
   categoryButtonActive: {
     backgroundColor: COLORS.primary,
   },
   categoryButtonText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "600" as const,
     color: COLORS.text,
   },
@@ -661,10 +661,10 @@ const styles = StyleSheet.create({
   },
   categoryBadge: {
     backgroundColor: COLORS.background,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
-    minWidth: 24,
+    minWidth: 20,
     alignItems: "center",
   },
   categoryBadgeActive: {
@@ -717,11 +717,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   brandHeader: {
-    fontSize: 18,
-    fontWeight: "700" as const,
+    fontSize: 16,
+    fontWeight: "600" as const,
     color: COLORS.text,
-    marginBottom: 12,
-    letterSpacing: -0.3,
+    marginBottom: 10,
+    letterSpacing: -0.2,
   },
   grid: {
     flexDirection: "row",
@@ -731,13 +731,8 @@ const styles = StyleSheet.create({
   card: {
     width: CARD_WIDTH,
     backgroundColor: COLORS.surface,
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
     position: "relative",
   },
   cardImage: {
@@ -746,17 +741,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   cardContent: {
-    padding: 6,
+    padding: 8,
   },
   cardTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "600" as const,
     color: COLORS.text,
   },
   cardBrand: {
     fontSize: 10,
     color: COLORS.textSecondary,
-    marginTop: 2,
+    marginTop: 1,
   },
   cardFooter: {
     flexDirection: "row",
@@ -799,24 +794,24 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 24,
     right: 24,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   filtersContainer: {
     backgroundColor: COLORS.surface,
     marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 12,
   },
   filtersHeader: {
     flexDirection: "row",

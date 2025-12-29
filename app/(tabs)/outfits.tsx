@@ -280,18 +280,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 24,
+    paddingBottom: 16,
   },
   title: {
-    fontSize: 32,
-    fontWeight: "800" as const,
+    fontSize: 28,
+    fontWeight: "700" as const,
     color: COLORS.text,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.textSecondary,
-    marginTop: 4,
+    marginTop: 2,
   },
   emptyState: {
     alignItems: "center",
@@ -318,13 +318,8 @@ const styles = StyleSheet.create({
   },
   outfitCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 12,
+    padding: 12,
   },
   outfitCardHeader: {
     flexDirection: "row",
@@ -333,15 +328,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   outfitName: {
-    fontSize: 18,
-    fontWeight: "700" as const,
+    fontSize: 16,
+    fontWeight: "600" as const,
     color: COLORS.text,
   },
   outfitStyle: {
-    fontSize: 13,
+    fontSize: 12,
     color: COLORS.textSecondary,
     textTransform: "capitalize",
-    marginTop: 2,
+    marginTop: 1,
   },
   deleteButton: {
     width: 36,
@@ -362,9 +357,9 @@ const styles = StyleSheet.create({
   outfitItemImage: {
     width: ITEM_SIZE,
     height: ITEM_SIZE,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    marginBottom: 6,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
+    marginBottom: 4,
   },
   outfitItemLabel: {
     fontSize: 11,
@@ -421,9 +416,9 @@ const styles = StyleSheet.create({
   filtersContainer: {
     backgroundColor: COLORS.surface,
     marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 16,
-    padding: 16,
+    marginBottom: 16,
+    borderRadius: 12,
+    padding: 12,
   },
   filtersHeader: {
     flexDirection: "row",
