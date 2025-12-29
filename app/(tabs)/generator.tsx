@@ -20,6 +20,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useWardrobe } from "../../contexts/WardrobeContext";
 import { useWeather } from "../../contexts/WeatherContext";
 import { useFeedback } from "../../contexts/FeedbackContext";
+import { useUserProfile } from "../../contexts/UserProfileContext";
 import RatingModal from "../../components/RatingModal";
 import type { FeedbackEntry } from "../../types/feedback";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
@@ -37,6 +38,7 @@ export default function GeneratorScreen() {
   const { sneakers, tops, bottoms, hats, socks, saveOutfit, isSavingOutfit, markItemsAsWorn, isMarkingWorn, getItemById } = useWardrobe();
   const { weather, recommendedSeason } = useWeather();
   const { addFeedback, getImprovementContext, isAddingFeedback } = useFeedback();
+  const { profile } = useUserProfile();
   const [selectedStyle, setSelectedStyle] = useState<OutfitStyle>("urban");
   const [includeHat, setIncludeHat] = useState(false);
   const [minDaysSinceWorn, setMinDaysSinceWorn] = useState<MinDaysSinceWorn>(7);
@@ -61,7 +63,6 @@ export default function GeneratorScreen() {
   const [selectedOutfit, setSelectedOutfit] = useState<'A' | 'B'>('A');
   const generatedOutfit = selectedOutfit === 'A' ? generatedOutfitA : generatedOutfitB;
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [lastGeneratedOutfitId, setLastGeneratedOutfitId] = useState<string | null>(null);
   const [lockedItems, setLockedItems] = useState<{
     sneaker?: boolean;
     top?: boolean;
@@ -206,6 +207,68 @@ export default function GeneratorScreen() {
         ? `Current weather: ${weather.temperature}°F, ${weather.condition} in ${weather.location}. Recommended season: ${recommendedSeason}.`
         : `Current season: ${recommendedSeason}.`;
 
+      const buildUserProfileContext = () => {
+        const parts: string[] = [];
+        
+        if (profile.gender && profile.gender !== 'prefer-not-to-say') {
+          parts.push(`Gender: ${profile.gender}`);
+        }
+        
+        if (profile.bodyType) {
+          const bodyTypeGuide: Record<string, string> = {
+            athletic: 'athletic build - fitted styles work well, can pull off slim and tailored looks',
+            slim: 'slim build - layering adds dimension, avoid overly baggy items',
+            average: 'balanced proportions - versatile, most styles work well',
+            muscular: 'muscular build - structured fits, avoid tight clothes, embrace comfort',
+            curvy: 'curvy figure - embrace silhouettes that highlight shape, balanced proportions',
+            'plus-size': 'plus-size - prioritize comfort and confidence, well-fitted pieces over baggy'
+          };
+          parts.push(`Body Type: ${profile.bodyType} (${bodyTypeGuide[profile.bodyType] || ''})`);;
+        }
+        
+        if (profile.hairColor) {
+          const hairColorGuide: Record<string, string> = {
+            black: 'black hair - pairs well with bold colors, jewel tones, crisp whites',
+            brown: 'brown hair - earth tones, warm colors, versatile with most palettes',
+            blonde: 'blonde hair - pastels, navy, earth tones complement well',
+            red: 'red hair - greens, blues, earth tones; avoid clashing reds',
+            gray: 'gray/silver hair - jewel tones, black, white create striking contrast',
+            white: 'white hair - bold colors pop beautifully, classic combinations work',
+            other: 'unique hair color - consider complementary color theory'
+          };
+          parts.push(`Hair Color: ${profile.hairColor} (${hairColorGuide[profile.hairColor] || ''})`);;
+        }
+        
+        if (profile.eyeColor) {
+          const eyeColorGuide: Record<string, string> = {
+            brown: 'brown eyes - warm tones, golds, greens bring out richness',
+            blue: 'blue eyes - oranges, coppers, warm browns create contrast',
+            green: 'green eyes - purples, burgundy, warm reds make them pop',
+            hazel: 'hazel eyes - greens, golds, purples highlight golden flecks',
+            gray: 'gray eyes - jewel tones, charcoal, silver enhance depth',
+            amber: 'amber eyes - blues, greens, purples create beautiful contrast'
+          };
+          parts.push(`Eye Color: ${profile.eyeColor} (${eyeColorGuide[profile.eyeColor] || ''})`);;
+        }
+        
+        if (profile.height && profile.heightUnit) {
+          const heightCm = profile.heightUnit === 'ft' ? profile.height * 30.48 : profile.height;
+          let heightGuidance = '';
+          if (heightCm < 160) {
+            heightGuidance = 'shorter stature - avoid overwhelming proportions, fitted items work well';
+          } else if (heightCm < 175) {
+            heightGuidance = 'average height - versatile proportions, most styles work';
+          } else {
+            heightGuidance = 'taller stature - can pull off longer layers, oversized styles';
+          }
+          parts.push(`Height: ${profile.height}${profile.heightUnit} (${heightGuidance})`);;
+        }
+        
+        return parts.length > 0 ? `\n\nUSER PROFILE:\n${parts.join('\n')}` : '';
+      };
+
+      const userProfileContext = buildUserProfileContext();
+
       const feedbackContext = getImprovementContext("outfit_generation");
 
       const includeHatInPrompt = includeHat && hatsToUse.length > 0;
@@ -268,7 +331,7 @@ export default function GeneratorScreen() {
       const prompt = includeHatInPrompt
         ? `You are a fashion stylist. Create a ${style} style outfit by selecting items from these lists.${variationHint}
 
-${weatherContext}${lockedContext}
+${weatherContext}${userProfileContext}${lockedContext}
 
 SNEAKERS (always include):
 ${sneakersList}
@@ -309,7 +372,7 @@ ${lockedContext ? "- IMPORTANT: Match new items to coordinate with the locked it
 Prioritize items marked with the current season.${feedbackContext}`
         : `You are a fashion stylist. Create a ${style} style outfit by selecting items from these lists.${variationHint}
 
-${weatherContext}${lockedContext}
+${weatherContext}${userProfileContext}${lockedContext}
 
 SNEAKERS (always include):
 ${sneakersList}
@@ -434,7 +497,6 @@ Prioritize items marked with the current season.${feedbackContext}`;
       setGeneratedOutfitB(outfitB);
       
       setSelectedOutfit('A');
-      setLastGeneratedOutfitId(Date.now().toString());
       
       setTimeout(() => {
         setShowRatingModal(true);
