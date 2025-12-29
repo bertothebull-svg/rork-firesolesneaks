@@ -126,7 +126,7 @@ export default function AddItemScreen() {
     useReactCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
 
-      if (editingItem) {
+      if (params.editId && editingItem) {
         setCategory(editingItem.category);
         setName(editingItem.name);
         setBrand(editingItem.brand || "");
@@ -169,8 +169,15 @@ export default function AddItemScreen() {
         setSelectedOutfitStyles([]);
         setIsPartOfSet(false);
         setSetId("");
+        setLastIdentificationData(null);
+        setShowAccuracyRating(false);
+        setIsIdentifyingShoe(false);
+        setIsSearching(false);
+        setShowCamera(false);
+        setShowCustomColorInput(false);
+        setShowCustomAccentColorInput(false);
       }
-    }, [editingItem, params.category])
+    }, [params.editId, editingItem, params.category])
   );
 
 
