@@ -319,9 +319,21 @@ export default function GeneratorScreen() {
       
       const variationHint = useOutfit === 'B' ? "\n\nIMPORTANT: Create a DIFFERENT outfit variation. Try alternative color combinations, different item selections, or complementary pieces that offer variety while maintaining the style." : "";
       
-      const styleGuidance = style === "nineties"
-        ? "For 90's style: prioritize bold, loud colors that pop together. Mix multiple bright colors across all items. Embrace color clashing and vibrant combinations typical of 90's fashion - think neon greens, hot pinks, electric blues, and bright yellows working together. Be adventurous with color mixing!"
-        : `Style matching for ${style} aesthetic`;
+      const getStyleGuidance = (style: OutfitStyle): string => {
+        const guides: Record<OutfitStyle, string> = {
+          urban: "Urban style: Street-ready and bold. Mix high and low fashion. Prioritize statement sneakers as the focal point. Coordinate with neutral or complementary tones in tops/bottoms. Layer strategically with hoodies, bombers, or denim jackets. Think streetwear culture - clean lines, confident colors, modern edge.",
+          preppy: "Preppy style: Clean, classic, polished. Favor neutral colors (navy, white, khaki, pastels). Coordinate subtle patterns (stripes, checks). Keep sneakers understated - white, navy, or earth tones. Button-downs, polos, chinos. Think country club, Ivy League - timeless and refined.",
+          dad: "Dad style: Comfortable and relaxed. Prioritize fit over fashion. Mix casual basics - t-shirts, jeans, New Balance or running shoes. Use muted, safe colors (grays, blues, beiges). Avoid trendy pieces. Think practical comfort - what feels good matters most. Sneakers should be classic, comfortable models.",
+          stylish: "Stylish/Fashion-forward: Trend-aware and put-together. Take calculated risks with color and silhouette. Layer thoughtfully. Sneakers can be bold or minimal depending on outfit balance. Mix textures and proportions. Think editorial, Instagram-worthy - carefully curated and intentional.",
+          casual: "Casual style: Easy, effortless everyday wear. Basic wardrobe staples. Comfortable fits. Versatile colors that mix easily (grays, blacks, denim, earth tones). Sneakers are functional first. Think grab-and-go simplicity - no overthinking, just works.",
+          sporty: "Sporty/Athletic style: Performance-inspired aesthetic. Favor athletic brands, technical fabrics, sporty silhouettes. Coordinate brand families (all Nike, all Adidas). Use athletic color blocking. Include track pants, joggers, performance tees. Sneakers are statement pieces - running, training, or basketball models.",
+          nineties: "90's style: Bold, loud, vibrant. Embrace color clashing - neon greens, hot pinks, electric blues, bright yellows, bold purples together. Mix multiple bright colors fearlessly. Oversized fits, baggy jeans, graphic tees. Chunky retro sneaker silhouettes. Think Fresh Prince, hip-hop golden age - more is more.",
+          workappropriate: "Work appropriate/Professional: Office-ready polish. Business casual standards. Neutral, sophisticated colors (charcoal, navy, black, white). Clean sneakers in leather or minimal designs. Pair with chinos, dress pants, button-downs, blazers. Think modern professional - put-together but not stuffy."
+        };
+        return guides[style];
+      };
+      
+      const styleGuidance = getStyleGuidance(style);
 
       const baseLayerList = topsToUse.filter(t => 
         t.subtype === 'tshirt' || t.subtype === 'polo' || !t.subtype || t.subtype === 'buttondown'
@@ -821,11 +833,7 @@ Prioritize items marked with the current season.${feedbackContext}`;
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Choose Your Style</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.stylesContainer}
-          >
+          <View style={styles.stylesGrid}>
             {OUTFIT_STYLES.map((style) => (
               <TouchableOpacity
                 key={style.id}
@@ -842,10 +850,10 @@ Prioritize items marked with the current season.${feedbackContext}`;
                 ]}>
                   {style.label}
                 </Text>
-                <Text style={styles.styleDescription}>{style.description}</Text>
+                <Text style={styles.styleDescription} numberOfLines={2}>{style.description}</Text>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
         </View>
 
         <View style={styles.settingsContainer}>
@@ -1321,40 +1329,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 12,
   },
-  stylesContainer: {
+  stylesGrid: {
     paddingHorizontal: 20,
-    gap: 12,
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 10,
   },
   styleCard: {
-    width: 130,
+    width: (width - 60) / 2,
     backgroundColor: COLORS.surface,
-    padding: 12,
+    padding: 14,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "transparent",
-    marginRight: 10,
+    alignItems: "center" as const,
   },
   styleCardActive: {
     backgroundColor: COLORS.surface,
     borderColor: COLORS.primary,
   },
   styleEmoji: {
-    fontSize: 28,
-    marginBottom: 6,
+    fontSize: 32,
+    marginBottom: 8,
   },
   styleLabel: {
-    fontSize: 14,
-    fontWeight: "600" as const,
+    fontSize: 13,
+    fontWeight: "700" as const,
     color: COLORS.text,
-    marginBottom: 3,
+    marginBottom: 4,
+    textAlign: "center" as const,
   },
   styleLabelActive: {
     color: COLORS.primary,
   },
   styleDescription: {
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    lineHeight: 16,
+    lineHeight: 15,
+    textAlign: "center" as const,
   },
   generateButton: {
     backgroundColor: COLORS.primary,
