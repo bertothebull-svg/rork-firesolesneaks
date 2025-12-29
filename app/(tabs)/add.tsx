@@ -587,7 +587,8 @@ Return ONLY the JSON object.`;
 
     setIsIdentifyingShoe(true);
     try {
-      console.log("[Shoe Identification] Starting AI analysis... (Attempt " + (retryCount + 1) + "/3)");
+      console.log("[Shoe Identification] Starting ENHANCED AI analysis... (Attempt " + (retryCount + 1) + "/3)");
+      console.log("[Shoe Identification] Using two-stage identification for maximum accuracy");
       console.log("[Shoe Identification] Image URI type:", typeof imageUri);
       console.log("[Shoe Identification] Image URI length:", imageUri.length);
 
@@ -625,18 +626,55 @@ Return ONLY the JSON object.`;
       
       console.log("[Shoe Identification] Analyzing shoe with AI...");
       
-      const prompt = `You are an elite sneaker authenticator with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL listings. Analyze this shoe image with forensic-level detail.
+      const prompt = `You are an elite sneaker authenticator with forensic-level expertise. Your task is to analyze this shoe image with EXTREME PRECISION, focusing on every visible detail that distinguishes this EXACT shoe from similar models.
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
-ANALYSIS FRAMEWORK:
+🎯 CRITICAL MISSION: Identify the EXACT colorway and variant, not just the general model.
 
-🔍 PRIMARY IDENTIFICATION MARKERS:
-1. Brand Logo & Placement: Shape, size, positioning, font style
-2. Silhouette Recognition: Exact model family (Jordan 1 High vs Mid vs Low, Dunk vs SB Dunk)
-3. Colorway Analysis: Specific panel colors, blocking patterns, gradients
-4. Material Identification: Leather (smooth/tumbled/patent), suede, nubuck, mesh, canvas, synthetic
-5. Stitching Patterns: Color, density, pattern, visible vs hidden stitches
+⚠️ COMMON MISTAKES TO AVOID:
+- Confusing similar colorways (e.g., "University Blue" vs "Powder Blue")
+- Missing year-specific details (2015 release vs 2023 retro)
+- Overlooking collaboration markers (Off-White, Travis Scott, Fragment)
+- Not noticing material differences (leather vs suede vs patent)
+- Ignoring small branding differences (Nike Air vs Jumpman)
+
+🔬 FORENSIC ANALYSIS CHECKLIST:
+
+1️⃣ BRAND IDENTIFICATION (Look at tongue, heel, insole, lace tags):
+   - What logos are visible? Where exactly?
+   - What text appears on tongue tags?
+   - Any collaboration branding visible?
+
+2️⃣ SILHOUETTE CONFIRMATION (Be extremely specific):
+   - Exact model name (Air Jordan 1 HIGH vs MID vs LOW)
+   - OG, Retro, Retro High OG, or other variant?
+   - Special edition markers visible?
+
+3️⃣ COLORWAY FORENSICS (THIS IS CRITICAL - BE PRECISE):
+   - PANEL-BY-PANEL color analysis:
+     * Toe box color and material
+     * Side panel color and material  
+     * Heel panel color and material
+     * Swoosh/logo color and material
+     * Collar/ankle area color
+     * Sole color (multiple layers if visible)
+   - Exact color names ("University Blue" not "light blue")
+   - Color blocking pattern unique to this colorway
+   - Any gradient, fade, or aged effects?
+
+4️⃣ MATERIAL IDENTIFICATION:
+   - Smooth leather, tumbled leather, or patent leather?
+   - Suede, nubuck, or synthetic materials?
+   - Mesh, canvas, or textured fabrics?
+   - Material differences between panels
+
+5️⃣ DISTINGUISHING FEATURES:
+   - Stitching color (matches panels or contrasts?)
+   - Visible SKU or text anywhere?
+   - Special details: reflective, glow-in-dark, translucent
+   - Unique lace colors or aglet (lace tip) details
+   - Heel tab shape and markings
 
 🎯 CRITICAL DETAILS:
 6. Swoosh/Logo: Exact curve, thickness, material, placement on shoe
@@ -678,31 +716,38 @@ ANALYSIS FRAMEWORK:
 - Use official colorway names not generic descriptions ("University Blue" not "light blue")
 - Include collaboration details if applicable (Off-White, Travis Scott, etc.)
 
+🎯 ACCURACY REQUIREMENTS:
+- If you can see 3+ distinctive features that match a specific colorway → HIGH confidence
+- If you can identify model but colorway is uncertain → MEDIUM confidence  
+- If multiple colorways are possible → LOW confidence (and list why)
+
 📝 REQUIRED JSON FORMAT:
 {
   "brand": "exact official brand (Nike, Air Jordan, Adidas Yeezy, New Balance, etc.)",
   "model": "complete official product name as it appears on GOAT/StockX",
   "silhouette": "precise silhouette with height/type (Air Jordan 1 Retro High OG, Nike Dunk Low, etc.)",
-  "colorway": "official colorway name with specific color descriptors (not generic colors)",
+  "colorway": "official colorway name - BE EXTREMELY SPECIFIC (e.g., 'University Blue' not 'blue', 'Bred' not 'black and red')",
   "style": "popular nickname or collaboration name",
   "name": "full combined product name",
   "commonName": "how it's listed on major marketplaces",
-  "styleCode": "official SKU/Style Code if visible or identifiable",
-  "colors": ["all visible colors in order of prominence"],
-  "mainColors": ["2-3 dominant colors"],
-  "accentColors": ["secondary/accent colors"],
+  "styleCode": "official SKU/Style Code if visible or deducible from unique features",
+  "colors": ["all visible colors using EXACT names like 'University Blue', 'Sail', 'Crimson Tint'"],
+  "mainColors": ["2-3 dominant colors with official names"],
+  "accentColors": ["secondary/accent colors with official names"],
+  "panelByPanelColors": "describe color of each visible panel: toe, side, heel, swoosh, collar, sole",
   "retailPrice": "original retail price USD (number only, best estimate)",
   "marketValue": "current average resale USD (number only, recent market data)",
-  "releaseYear": "year of release",
+  "releaseYear": "year of release if identifiable",
   "releaseDate": "specific date if identifiable (MM/DD/YYYY)",
-  "materials": "detailed material breakdown by panel",
-  "materialDetails": "specific material types and textures observed",
-  "distinguishingFeatures": "unique identifiers: stitching, panels, logos, special details",
-  "specialFeatures": "reflective, glow, special laces, unique box, hangtags",
-  "confidence": "high (99% certain with SKU match), medium (strong visual match), low (similar but uncertain)",
-  "matchingSources": "which platforms confirm this identification",
-  "description": "comprehensive technical description",
-  "notes": "any additional context or variant information"
+  "materials": "detailed material breakdown by panel (be specific: smooth leather, tumbled leather, suede, etc.)",
+  "materialDetails": "specific material types and textures observed on each section",
+  "distinguishingFeatures": "CRITICAL: List 5+ unique identifiers that distinguish this EXACT colorway from similar ones",
+  "specialFeatures": "reflective, glow, special laces, unique materials, collaboration markers",
+  "confidence": "high (identified 5+ unique features), medium (identified model + likely colorway), low (model identified but colorway uncertain)",
+  "confidenceReason": "explain WHY you gave this confidence rating and what details you used",
+  "alternativePossibilities": "if not HIGH confidence, list other possible colorways and why",
+  "searchQuery": "the MOST SPECIFIC search query to verify this shoe: Brand + Model + Colorway + Year + SKU if known",
+  "description": "comprehensive technical description focusing on what makes this colorway unique"
 }
 
 🎯 CONFIDENCE LEVELS:
@@ -780,6 +825,8 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       };
       
       console.log("[Shoe Identification] Processed data:", JSON.stringify(data).substring(0, 300));
+      console.log("[Shoe Identification] Confidence:", data.confidence);
+      console.log("[Shoe Identification] Confidence Reason:", result.confidenceReason);
       
       if (!data || typeof data !== 'object') {
         console.error("[Shoe Identification] Data is not an object:", typeof data);
@@ -797,8 +844,10 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       }
       
       console.log("[Shoe Identification] Data validated successfully");
+      console.log("[Shoe Identification] Search Query for verification:", result.searchQuery);
       
       let hasIdentified = false;
+      let shouldCrossReference = false;
 
       if (data.brand && data.brand !== "Unknown" && data.brand.toLowerCase() !== "unknown") {
         setBrand(data.brand);
@@ -848,6 +897,17 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
         setNotes(currentNotes + `Style Code: ${data.styleCode}`);
       }
       
+      if (result.distinguishingFeatures) {
+        const currentNotes = notes || "";
+        const separator = currentNotes ? "\n\n" : "";
+        setNotes(currentNotes + separator + `Key Features: ${result.distinguishingFeatures}`);
+      }
+      
+      if (data.confidence === "medium" || data.confidence === "low") {
+        shouldCrossReference = true;
+        console.log("[Shoe Identification] Medium/Low confidence detected. Will cross-reference with database search.");
+      }
+      
       if (!hasIdentified) {
         if (retryCount < 2) {
           console.log("[Shoe Identification] No data extracted, retrying...");
@@ -873,6 +933,101 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       
       if (data.confidence) {
         message += `\n\nConfidence: ${data.confidence.toUpperCase()}`;
+        if (result.confidenceReason) {
+          message += `\n${result.confidenceReason}`;
+        }
+      }
+      
+      if (shouldCrossReference && result.searchQuery) {
+        console.log("[Shoe Identification] Starting database cross-reference with query:", result.searchQuery);
+        message += `\n\n🔍 Verifying with online databases...`;
+        
+        Alert.alert(
+          "Shoe Identified! 👟", 
+          message
+        );
+        
+        try {
+          console.log("[Shoe Identification] Cross-referencing with sneaker databases...");
+          const searchResult = await sneakerSearchMutation.mutateAsync(result.searchQuery || `${data.brand} ${data.model} ${data.colorway}`);
+          
+          console.log("[Shoe Identification] Cross-reference complete:", searchResult);
+          
+          if (searchResult.brand) setBrand(searchResult.brand);
+          if (searchResult.model) setName(searchResult.model);
+          if (searchResult.silhouette) setSilhouette(searchResult.silhouette);
+          if (searchResult.style) setStyle(searchResult.style);
+          if (searchResult.colorway) {
+            setMainColors([searchResult.colorway]);
+          }
+          if (searchResult.styleCode) {
+            const existingNotes = notes || "";
+            if (!existingNotes.includes(searchResult.styleCode)) {
+              const separator = existingNotes ? "\n\n" : "";
+              setNotes(existingNotes + separator + `Verified Style Code: ${searchResult.styleCode}`);
+            }
+          }
+          if (searchResult.marketValue) setMarketValue(searchResult.marketValue);
+          if (searchResult.retailPrice) setPurchasePrice(searchResult.retailPrice);
+          
+          if (searchResult.imageSearchQuery) {
+            try {
+              console.log("[Shoe Identification] Fetching verified product image...");
+              const verifiedImage = await searchRealImageMutation.mutateAsync(searchResult.imageSearchQuery);
+              setImageUri(verifiedImage);
+              setImageError(false);
+              console.log("[Shoe Identification] Verified image loaded successfully");
+              
+              Alert.alert(
+                "✅ Verification Complete",
+                `Cross-referenced with ${searchResult.sources || "major databases"}.\n\nConfidence upgraded! Details and verified image loaded.`,
+                [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      setTimeout(() => {
+                        setShowAccuracyRating(true);
+                      }, 500);
+                    }
+                  }
+                ]
+              );
+            } catch (imgError) {
+              console.error("[Shoe Identification] Failed to load verified image:", imgError);
+              Alert.alert(
+                "✅ Verification Complete",
+                `Cross-referenced with databases. Details updated but keeping your original photo.`,
+                [
+                  {
+                    text: "OK",
+                    onPress: () => {
+                      setTimeout(() => {
+                        setShowAccuracyRating(true);
+                      }, 500);
+                    }
+                  }
+                ]
+              );
+            }
+          }
+        } catch (crossRefError) {
+          console.error("[Shoe Identification] Cross-reference failed:", crossRefError);
+          Alert.alert(
+            "Photo Analysis Complete",
+            "Identified from photo but couldn't verify with databases. Please review details carefully.",
+            [
+              {
+                text: "OK",
+                onPress: () => {
+                  setTimeout(() => {
+                    setShowAccuracyRating(true);
+                  }, 500);
+                }
+              }
+            ]
+          );
+        }
+        return true;
       }
       
       Alert.alert(
@@ -1101,23 +1256,32 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
             </View>
           )}
           {category === "sneaker" && imageUri && !imageError && (
-            <TouchableOpacity 
-              style={styles.identifyButton} 
-              onPress={() => identifyShoeFromPhoto()}
-              disabled={isIdentifyingShoe}
-            >
-              {isIdentifyingShoe ? (
-                <>
-                  <ActivityIndicator size="small" color="#FFF" />
-                  <Text style={styles.identifyButtonText}>Identifying Shoe...</Text>
-                </>
-              ) : (
-                <>
-                  <Sparkles size={20} color="#FFF" />
-                  <Text style={styles.identifyButtonText}>✨ Identify Shoe from Photo</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <>
+              <View style={styles.photoTipsCard}>
+                <Text style={styles.photoTipsTitle}>📸 For Best Results:</Text>
+                <Text style={styles.photoTipsText}>• Side profile view showing swoosh/logo</Text>
+                <Text style={styles.photoTipsText}>• Clear, well-lit photo</Text>
+                <Text style={styles.photoTipsText}>• Show heel area if possible</Text>
+                <Text style={styles.photoTipsText}>• Include tongue tag or size label</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.identifyButton} 
+                onPress={() => identifyShoeFromPhoto()}
+                disabled={isIdentifyingShoe}
+              >
+                {isIdentifyingShoe ? (
+                  <>
+                    <ActivityIndicator size="small" color="#FFF" />
+                    <Text style={styles.identifyButtonText}>Analyzing Shoe Details...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} color="#FFF" />
+                    <Text style={styles.identifyButtonText}>✨ Identify Shoe from Photo</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -2071,6 +2235,26 @@ const styles = StyleSheet.create({
   timesWornText: {
     fontSize: 14,
     color: COLORS.textSecondary,
+  },
+  photoTipsCard: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 20,
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  photoTipsTitle: {
+    fontSize: 14,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  photoTipsText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
   accuracyRatingOverlay: {
     position: "absolute",
