@@ -21,10 +21,11 @@ import { useWardrobe } from "../../contexts/WardrobeContext";
 import { useWeather } from "../../contexts/WeatherContext";
 import { useFeedback } from "../../contexts/FeedbackContext";
 import { useUserProfile } from "../../contexts/UserProfileContext";
+import { useCalendar } from "../../contexts/CalendarContext";
 import RatingModal from "../../components/RatingModal";
 import type { FeedbackEntry } from "../../types/feedback";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
-import type { OutfitStyle, SavedOutfit, WardrobeItem } from "../../types/wardrobe";
+import type { OutfitStyle, SavedOutfit, WardrobeItem, CalendarOutfit } from "../../types/wardrobe";
 import { generateText } from "@rork-ai/toolkit-sdk";
 
 const { width } = Dimensions.get("window");
@@ -36,6 +37,7 @@ export default function GeneratorScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { sneakers, tops, bottoms, hats, socks, saveOutfit, isSavingOutfit, markItemsAsWorn, isMarkingWorn, getItemById } = useWardrobe();
+  const { saveOutfitForDate } = useCalendar();
   const { weather, recommendedSeason } = useWeather();
   const { addFeedback, getImprovementContext, isAddingFeedback } = useFeedback();
   const { profile } = useUserProfile();
@@ -60,8 +62,24 @@ export default function GeneratorScreen() {
     hatId?: string;
     sockId?: string;
   } | null>(null);
-  const [selectedOutfit, setSelectedOutfit] = useState<'A' | 'B'>('A');
-  const generatedOutfit = selectedOutfit === 'A' ? generatedOutfitA : generatedOutfitB;
+  const [generatedOutfitC, setGeneratedOutfitC] = useState<{
+    sneakerId: string;
+    topId: string;
+    outerLayerId?: string;
+    bottomId: string;
+    hatId?: string;
+    sockId?: string;
+  } | null>(null);
+  const [generatedOutfitD, setGeneratedOutfitD] = useState<{
+    sneakerId: string;
+    topId: string;
+    outerLayerId?: string;
+    bottomId: string;
+    hatId?: string;
+    sockId?: string;
+  } | null>(null);
+  const [selectedOutfit, setSelectedOutfit] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const generatedOutfit = selectedOutfit === 'A' ? generatedOutfitA : selectedOutfit === 'B' ? generatedOutfitB : selectedOutfit === 'C' ? generatedOutfitC : generatedOutfitD;
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [lockedItems, setLockedItems] = useState<{
     sneaker?: boolean;
@@ -73,7 +91,7 @@ export default function GeneratorScreen() {
   }>({});
 
   const generateMutation = useMutation({
-    mutationFn: async (params: { style: OutfitStyle; forceNew?: boolean; useOutfit?: 'A' | 'B'; excludeItems?: string[] }) => {
+    mutationFn: async (params: { style: OutfitStyle; forceNew?: boolean; useOutfit?: 'A' | 'B' | 'C' | 'D'; excludeItems?: string[] }) => {
       const { style, forceNew, useOutfit, excludeItems = [] } = params;
       console.log("[Generate] Starting for style:", style);
       console.log("[Generate] Weather:", weather);
@@ -170,7 +188,7 @@ export default function GeneratorScreen() {
       let lockedHat = null;
       let lockedSock = null;
 
-      const currentOutfit = useOutfit === 'A' ? generatedOutfitA : useOutfit === 'B' ? generatedOutfitB : generatedOutfit;
+      const currentOutfit = useOutfit === 'A' ? generatedOutfitA : useOutfit === 'B' ? generatedOutfitB : useOutfit === 'C' ? generatedOutfitC : useOutfit === 'D' ? generatedOutfitD : generatedOutfit;
       
       if (currentOutfit && !forceNew) {
         if (lockedItems.sneaker) lockedSneaker = getItemById(currentOutfit.sneakerId);
@@ -471,7 +489,7 @@ Prioritize items marked with the current season.${feedbackContext}`;
       return;
     }
     
-    const generateBothOutfits = async () => {
+    const generateAllOutfits = async () => {
       const outfitA = await generateMutation.mutateAsync({ 
         style: selectedStyle, 
         forceNew: true, 
@@ -480,7 +498,6 @@ Prioritize items marked with the current season.${feedbackContext}`;
       setGeneratedOutfitA(outfitA);
       
       const excludeItemsForB: string[] = [];
-      
       if (tops.length > 1) excludeItemsForB.push(outfitA.topId);
       if (tops.length > 1 && outfitA.outerLayerId) excludeItemsForB.push(outfitA.outerLayerId);
       if (bottoms.length > 1) excludeItemsForB.push(outfitA.bottomId);
@@ -496,6 +513,38 @@ Prioritize items marked with the current season.${feedbackContext}`;
       });
       setGeneratedOutfitB(outfitB);
       
+      const excludeItemsForC: string[] = [...excludeItemsForB];
+      if (tops.length > 2) excludeItemsForC.push(outfitB.topId);
+      if (tops.length > 2 && outfitB.outerLayerId) excludeItemsForC.push(outfitB.outerLayerId);
+      if (bottoms.length > 2) excludeItemsForC.push(outfitB.bottomId);
+      if (sneakers.length > 2) excludeItemsForC.push(outfitB.sneakerId);
+      if (socks.length > 2 && outfitB.sockId) excludeItemsForC.push(outfitB.sockId);
+      if (hats.length > 2 && outfitB.hatId) excludeItemsForC.push(outfitB.hatId);
+      
+      const outfitC = await generateMutation.mutateAsync({ 
+        style: selectedStyle, 
+        forceNew: true, 
+        useOutfit: 'C',
+        excludeItems: excludeItemsForC
+      });
+      setGeneratedOutfitC(outfitC);
+      
+      const excludeItemsForD: string[] = [...excludeItemsForC];
+      if (tops.length > 3) excludeItemsForD.push(outfitC.topId);
+      if (tops.length > 3 && outfitC.outerLayerId) excludeItemsForD.push(outfitC.outerLayerId);
+      if (bottoms.length > 3) excludeItemsForD.push(outfitC.bottomId);
+      if (sneakers.length > 3) excludeItemsForD.push(outfitC.sneakerId);
+      if (socks.length > 3 && outfitC.sockId) excludeItemsForD.push(outfitC.sockId);
+      if (hats.length > 3 && outfitC.hatId) excludeItemsForD.push(outfitC.hatId);
+      
+      const outfitD = await generateMutation.mutateAsync({ 
+        style: selectedStyle, 
+        forceNew: true, 
+        useOutfit: 'D',
+        excludeItems: excludeItemsForD
+      });
+      setGeneratedOutfitD(outfitD);
+      
       setSelectedOutfit('A');
       
       setTimeout(() => {
@@ -503,7 +552,7 @@ Prioritize items marked with the current season.${feedbackContext}`;
       }, 500);
     };
     
-    generateBothOutfits().catch((error) => {
+    generateAllOutfits().catch((error) => {
       console.error("[Generate] Error generating outfits:", error);
     });
   };
@@ -525,58 +574,34 @@ Prioritize items marked with the current season.${feedbackContext}`;
 
     if (category === "outerLayer") {
       if (selectedOutfit === 'A') {
-        setGeneratedOutfitA(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            outerLayerId: undefined,
-          };
-        });
+        setGeneratedOutfitA(prev => prev ? { ...prev, outerLayerId: undefined } : null);
+      } else if (selectedOutfit === 'B') {
+        setGeneratedOutfitB(prev => prev ? { ...prev, outerLayerId: undefined } : null);
+      } else if (selectedOutfit === 'C') {
+        setGeneratedOutfitC(prev => prev ? { ...prev, outerLayerId: undefined } : null);
       } else {
-        setGeneratedOutfitB(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            outerLayerId: undefined,
-          };
-        });
+        setGeneratedOutfitD(prev => prev ? { ...prev, outerLayerId: undefined } : null);
       }
     } else if (category === "hat") {
       if (selectedOutfit === 'A') {
-        setGeneratedOutfitA(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            hatId: undefined,
-          };
-        });
+        setGeneratedOutfitA(prev => prev ? { ...prev, hatId: undefined } : null);
+      } else if (selectedOutfit === 'B') {
+        setGeneratedOutfitB(prev => prev ? { ...prev, hatId: undefined } : null);
+      } else if (selectedOutfit === 'C') {
+        setGeneratedOutfitC(prev => prev ? { ...prev, hatId: undefined } : null);
       } else {
-        setGeneratedOutfitB(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            hatId: undefined,
-          };
-        });
+        setGeneratedOutfitD(prev => prev ? { ...prev, hatId: undefined } : null);
       }
       setIncludeHat(false);
     } else if (category === "sock") {
       if (selectedOutfit === 'A') {
-        setGeneratedOutfitA(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            sockId: undefined,
-          };
-        });
+        setGeneratedOutfitA(prev => prev ? { ...prev, sockId: undefined } : null);
+      } else if (selectedOutfit === 'B') {
+        setGeneratedOutfitB(prev => prev ? { ...prev, sockId: undefined } : null);
+      } else if (selectedOutfit === 'C') {
+        setGeneratedOutfitC(prev => prev ? { ...prev, sockId: undefined } : null);
       } else {
-        setGeneratedOutfitB(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            sockId: undefined,
-          };
-        });
+        setGeneratedOutfitD(prev => prev ? { ...prev, sockId: undefined } : null);
       }
     }
   };
@@ -603,7 +628,23 @@ Prioritize items marked with the current season.${feedbackContext}`;
     }
 
     markItemsAsWorn(itemIds);
-    Alert.alert("Updated!", "Items marked as worn today");
+
+    const today = new Date().toISOString().split('T')[0];
+    const calendarOutfit: CalendarOutfit = {
+      id: Date.now().toString(),
+      date: today,
+      outfitId: Date.now().toString(),
+      sneakerId: generatedOutfit.sneakerId,
+      topId: generatedOutfit.topId,
+      outerLayerId: generatedOutfit.outerLayerId,
+      bottomId: generatedOutfit.bottomId,
+      hatId: generatedOutfit.hatId,
+      sockId: generatedOutfit.sockId,
+      style: selectedStyle,
+    };
+    saveOutfitForDate(calendarOutfit);
+
+    Alert.alert("Updated!", "Outfit saved to calendar and items marked as worn today");
   };
 
   const handleSave = () => {
@@ -888,13 +929,25 @@ Prioritize items marked with the current season.${feedbackContext}`;
                 style={[styles.abButton, selectedOutfit === 'A' && styles.abButtonActive]}
                 onPress={() => setSelectedOutfit('A')}
               >
-                <Text style={[styles.abButtonText, selectedOutfit === 'A' && styles.abButtonTextActive]}>Option A</Text>
+                <Text style={[styles.abButtonText, selectedOutfit === 'A' && styles.abButtonTextActive]}>A</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.abButton, selectedOutfit === 'B' && styles.abButtonActive]}
                 onPress={() => setSelectedOutfit('B')}
               >
-                <Text style={[styles.abButtonText, selectedOutfit === 'B' && styles.abButtonTextActive]}>Option B</Text>
+                <Text style={[styles.abButtonText, selectedOutfit === 'B' && styles.abButtonTextActive]}>B</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.abButton, selectedOutfit === 'C' && styles.abButtonActive]}
+                onPress={() => setSelectedOutfit('C')}
+              >
+                <Text style={[styles.abButtonText, selectedOutfit === 'C' && styles.abButtonTextActive]}>C</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.abButton, selectedOutfit === 'D' && styles.abButtonActive]}
+                onPress={() => setSelectedOutfit('D')}
+              >
+                <Text style={[styles.abButtonText, selectedOutfit === 'D' && styles.abButtonTextActive]}>D</Text>
               </TouchableOpacity>
             </View>
 
@@ -907,14 +960,14 @@ Prioritize items marked with the current season.${feedbackContext}`;
                     const hasLockedItems = Object.values(lockedItems).some(locked => locked);
                     
                     if (hasLockedItems) {
-                      const currentOutfit = selectedOutfit === 'A' ? generatedOutfitA : generatedOutfitB;
+                      const currentOutfit = selectedOutfit === 'A' ? generatedOutfitA : selectedOutfit === 'B' ? generatedOutfitB : selectedOutfit === 'C' ? generatedOutfitC : generatedOutfitD;
                       const excludeItemsForRegen: string[] = [];
                       
                       if (currentOutfit) {
-                        if (!lockedItems.sneaker) excludeItemsForRegen.push(currentOutfit.sneakerId);
-                        if (!lockedItems.top) excludeItemsForRegen.push(currentOutfit.topId);
+                        if (!lockedItems.sneaker && currentOutfit.sneakerId) excludeItemsForRegen.push(currentOutfit.sneakerId);
+                        if (!lockedItems.top && currentOutfit.topId) excludeItemsForRegen.push(currentOutfit.topId);
                         if (!lockedItems.outerLayer && currentOutfit.outerLayerId) excludeItemsForRegen.push(currentOutfit.outerLayerId);
-                        if (!lockedItems.bottom) excludeItemsForRegen.push(currentOutfit.bottomId);
+                        if (!lockedItems.bottom && currentOutfit.bottomId) excludeItemsForRegen.push(currentOutfit.bottomId);
                         if (!lockedItems.sock && currentOutfit.sockId) excludeItemsForRegen.push(currentOutfit.sockId);
                         if (!lockedItems.hat && currentOutfit.hatId) excludeItemsForRegen.push(currentOutfit.hatId);
                       }
@@ -928,8 +981,12 @@ Prioritize items marked with the current season.${feedbackContext}`;
                       
                       if (selectedOutfit === 'A') {
                         setGeneratedOutfitA(regeneratedOutfit);
-                      } else {
+                      } else if (selectedOutfit === 'B') {
                         setGeneratedOutfitB(regeneratedOutfit);
+                      } else if (selectedOutfit === 'C') {
+                        setGeneratedOutfitC(regeneratedOutfit);
+                      } else {
+                        setGeneratedOutfitD(regeneratedOutfit);
                       }
                     } else {
                       handleGenerate();

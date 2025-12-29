@@ -7,6 +7,7 @@ import { WardrobeProvider } from "../contexts/WardrobeContext";
 import { WeatherProvider } from "../contexts/WeatherContext";
 import { FeedbackProvider } from "../contexts/FeedbackContext";
 import { UserProfileProvider, useUserProfile } from "../contexts/UserProfileContext";
+import { CalendarProvider } from "../contexts/CalendarContext";
 import { trpc, trpcClient } from "@/lib/trpc";
 
 SplashScreen.preventAutoHideAsync();
@@ -51,9 +52,11 @@ export default function RootLayout() {
           <FeedbackProvider>
             <WeatherProvider>
               <WardrobeProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <RootLayoutNav />
-                </GestureHandlerRootView>
+                <CalendarProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <RootLayoutNav />
+                  </GestureHandlerRootView>
+                </CalendarProvider>
               </WardrobeProvider>
             </WeatherProvider>
           </FeedbackProvider>

@@ -43,4 +43,19 @@ export interface SavedOutfit {
   sockId?: string;
   dateCreated: string;
   aiGenerated: boolean;
+  dateWorn?: string;
+}
+
+export interface CalendarOutfit {
+  id: string;
+  date: string;
+  outfitId: string;
+  sneakerId: string;
+  topId: string;
+  outerLayerId?: string;
+  bottomId: string;
+  hatId?: string;
+  sockId?: string;
+  style: OutfitStyle;
+  notes?: string;
 }
