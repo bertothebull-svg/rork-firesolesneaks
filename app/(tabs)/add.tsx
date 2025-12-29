@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams, Stack, useFocusEffect } from "expo-router";
-import { Camera, Image as ImageIcon, ArrowLeft, AlertCircle, Sparkles, Star, X as XIcon } from "lucide-react-native";
+import { Camera, Image as ImageIcon, ArrowLeft, AlertCircle, Sparkles } from "lucide-react-native";
 import { useState, useCallback as useReactCallback, useRef } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CameraModal from "../../components/CameraModal";
@@ -59,7 +59,6 @@ export default function AddItemScreen() {
   const [showCamera, setShowCamera] = useState(false);
   const [selectedOutfitStyles, setSelectedOutfitStyles] = useState<OutfitStyle[]>([]);
   const [showAccuracyRating, setShowAccuracyRating] = useState(false);
-  const [accuracyRating, setAccuracyRating] = useState<number>(0);
   const [lastIdentificationData, setLastIdentificationData] = useState<{
     type: 'photo' | 'name';
     input: string;
@@ -281,9 +280,12 @@ export default function AddItemScreen() {
     mutationFn: async (sneakerName: string) => {
       console.log("[Sneaker Search] Starting search for:", sneakerName);
       
+      const feedbackContext = getImprovementContext("item_identification");
+      console.log("[Sneaker Search] Using feedback context:", feedbackContext);
+      
       const searchPrompt = `You are an elite sneaker identification expert with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL databases.
 
-SEARCH QUERY: "${sneakerName}"
+${feedbackContext ? feedbackContext + "\n" : ""}SEARCH QUERY: "${sneakerName}"
 
 YOUR MISSION:
 1. Find the EXACT shoe model with 100% accuracy
@@ -357,8 +359,30 @@ IMPORTANT:
 
 Return ONLY the JSON object.`;
 
-      const response = await generateText({ messages: [{ role: "user", content: searchPrompt }] });
-      console.log("[Sneaker Search] AI Response:", response);
+      let response;
+      let attempt = 0;
+      const maxAttempts = 3;
+      
+      while (attempt < maxAttempts) {
+        try {
+          response = await generateText({ messages: [{ role: "user", content: searchPrompt }] });
+          console.log("[Sneaker Search] AI Response (Attempt " + (attempt + 1) + "):", response);
+          if (response && response.trim().length > 0) {
+            break;
+          }
+        } catch (err) {
+          console.error("[Sneaker Search] Attempt", attempt + 1, "failed:", err);
+          if (attempt === maxAttempts - 1) {
+            throw err;
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        }
+        attempt++;
+      }
+      
+      if (!response || response.trim().length === 0) {
+        throw new Error("No response from AI after " + maxAttempts + " attempts");
+      }
 
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -462,13 +486,32 @@ Return ONLY the JSON object.`;
 
       if (result.imageSearchQuery) {
         console.log("[Sneaker Search] Fetching real image with query:", result.imageSearchQuery);
-        try {
-          const imageUrl = await searchRealImageMutation.mutateAsync(result.imageSearchQuery);
-          console.log("[Sneaker Search] Got image URL:", imageUrl);
-          setImageUri(imageUrl);
-          setImageError(false);
-        } catch (imageError) {
-          console.error("[Sneaker Search] Real image fetch failed:", imageError);
+        
+        const fallbackQueries = [
+          result.imageSearchQuery,
+          `${result.brand} ${result.model} ${result.styleCode || ""}`.trim(),
+          `${result.brand} ${result.silhouette} ${result.colorway}`.trim(),
+          `${result.brand} ${result.style || result.colorway}`.trim(),
+        ].filter((q, i, arr) => arr.indexOf(q) === i);
+        
+        let imageFound = false;
+        for (const query of fallbackQueries) {
+          try {
+            console.log("[Sneaker Search] Trying image query:", query);
+            const imageUrl = await searchRealImageMutation.mutateAsync(query);
+            console.log("[Sneaker Search] Got image URL:", imageUrl);
+            setImageUri(imageUrl);
+            setImageError(false);
+            imageFound = true;
+            break;
+          } catch (imageError) {
+            console.error("[Sneaker Search] Image query failed:", query, imageError);
+            continue;
+          }
+        }
+        
+        if (!imageFound) {
+          console.error("[Sneaker Search] All image queries failed");
           Alert.alert(
             "Image Not Found",
             "Could not find a product image online. Please add your own photo using the Camera or Library button."
@@ -482,9 +525,13 @@ Return ONLY the JSON object.`;
         output: result
       });
       
+      const successMessage = imageUri 
+        ? `✅ Found: ${result.brand || ""} ${result.model || ""}\n\nInformation and image loaded from online sources.${result.confidence ? `\n\nConfidence: ${result.confidence.toUpperCase()}` : ""}` 
+        : `✅ Found: ${result.brand || ""} ${result.model || ""}\n\nInformation auto-filled but could not find product image. Please add your own photo.`;
+      
       Alert.alert(
-        "Details Loaded ✅", 
-        imageUri ? "Sneaker information and image have been loaded from online sources." : "Sneaker information has been auto-filled. Could not load image - please add your own photo.",
+        "Details Loaded", 
+        successMessage,
         [
           {
             text: "OK",
@@ -501,59 +548,6 @@ Return ONLY the JSON object.`;
       Alert.alert("Error", "Failed to fetch sneaker data. Please try again or add details manually.");
     } finally {
       setIsSearching(false);
-    }
-  };
-
-  const aiAssistMutation = useMutation({
-    mutationFn: async (itemName: string) => {
-      console.log("[AI Assist] Starting for:", itemName);
-      
-      const response = await generateText({
-        messages: [
-          {
-            role: "user",
-            content: `You are a sneaker and fashion expert. Given the item name "${itemName}", provide details in this exact format:
-Brand: [brand name]
-Color: [primary color]
-Market Value: [estimated value in USD, number only]
-Description: [brief description]
-
-If you don't know exact details, provide best estimates based on similar items.`
-          }
-        ]
-      });
-
-      console.log("[AI Assist] Response:", response);
-
-      const brandMatch = response.match(/Brand:\s*(.+)/i);
-      const colorMatch = response.match(/Color:\s*(.+)/i);
-      const valueMatch = response.match(/Market Value:\s*(\d+)/i);
-
-      return {
-        brand: brandMatch?.[1]?.trim() || "",
-        color: colorMatch?.[1]?.trim() || "",
-        marketValue: valueMatch?.[1] || "",
-      };
-    },
-  });
-
-  const handleAIAssist = async () => {
-    if (!name.trim()) {
-      Alert.alert("Enter Item Name", "Please enter an item name first");
-      return;
-    }
-
-    try {
-      const result = await aiAssistMutation.mutateAsync(name);
-      if (result.brand) setBrand(result.brand);
-      if (result.color) {
-        setColors([result.color]);
-        setMainColors([result.color]);
-      }
-      if (result.marketValue) setMarketValue(result.marketValue);
-    } catch (error) {
-      console.error("[AI Assist] Error:", error);
-      Alert.alert("Error", "Failed to get AI suggestions");
     }
   };
 
@@ -585,10 +579,10 @@ If you don't know exact details, provide best estimates based on similar items.`
     setShowCamera(false);
   };
 
-  const identifyShoeFromPhoto = async (retryCount = 0) => {
+  const identifyShoeFromPhoto = async (retryCount = 0): Promise<boolean> => {
     if (!imageUri) {
       Alert.alert("No Photo", "Please take or select a photo first");
-      return;
+      return false;
     }
 
     setIsIdentifyingShoe(true);
@@ -625,10 +619,15 @@ If you don't know exact details, provide best estimates based on similar items.`
         console.log("[Shoe Identification] Waiting " + waitTime + "ms before retry...");
         await new Promise(resolve => setTimeout(resolve, waitTime));
       }
+
+      const feedbackContext = getImprovementContext("item_identification");
+      console.log("[Shoe Identification] Feedback context:", feedbackContext);
       
       console.log("[Shoe Identification] Analyzing shoe with AI...");
       
       const prompt = `You are an elite sneaker authenticator with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL listings. Analyze this shoe image with forensic-level detail.
+
+${feedbackContext ? feedbackContext + "\n" : ""}
 
 ANALYSIS FRAMEWORK:
 
@@ -850,11 +849,17 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       }
       
       if (!hasIdentified) {
+        if (retryCount < 2) {
+          console.log("[Shoe Identification] No data extracted, retrying...");
+          setIsIdentifyingShoe(false);
+          return await identifyShoeFromPhoto(retryCount + 1);
+        }
+        
         Alert.alert(
           "Could Not Identify",
           data.description || "Unable to identify the shoe from this image. Please enter details manually or try:\n\n• A clearer photo\n• Better lighting\n• Show brand logos clearly"
         );
-        return;
+        return false;
       }
 
       setLastIdentificationData({
@@ -884,10 +889,18 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
           }
         ]
       );
+      return true;
     } catch (error) {
       console.error("[Shoe Identification] Error:", error);
       
-      let errorMessage = "Failed to identify the shoe. Try with a clearer photo showing:\n\n• Side view of the shoe\n• Visible brand logos\n• Good lighting\n• Close-up view";
+      if (retryCount < 2) {
+        console.log("[Shoe Identification] Error occurred, retrying...");
+        setIsIdentifyingShoe(false);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return await identifyShoeFromPhoto(retryCount + 1);
+      }
+      
+      let errorMessage = "Failed to identify the shoe after 3 attempts. Try with a clearer photo showing:\n\n• Side view of the shoe\n• Visible brand logos\n• Good lighting\n• Close-up view";
       
       if (error instanceof Error) {
         console.error("[Shoe Identification] Error name:", error.name);
@@ -896,13 +909,16 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
           console.error("[Shoe Identification] Error stack:", error.stack.substring(0, 500));
         }
         
-        errorMessage = error.message;
+        if (!error.message.includes("attempt")) {
+          errorMessage = error.message + "\n\nPlease try again or enter details manually.";
+        }
       }
       
       Alert.alert(
         "Identification Failed", 
         errorMessage
       );
+      return false;
     } finally {
       setIsIdentifyingShoe(false);
     }
@@ -1558,7 +1574,6 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
         visible={showAccuracyRating}
         onClose={() => {
           setShowAccuracyRating(false);
-          setAccuracyRating(0);
         }}
         onSubmit={handleRatingSubmit}
         title="Rate Identification Accuracy"
