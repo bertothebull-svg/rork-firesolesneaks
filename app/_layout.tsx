@@ -20,16 +20,26 @@ function RootLayoutNav() {
   const segments = useSegments();
 
   useEffect(() => {
-    if (isLoading) return;
+    const hideAndNavigate = async () => {
+      if (isLoading) return;
 
-    const inOnboarding = segments[0] === "onboarding";
+      await SplashScreen.hideAsync();
 
-    if (!profile.hasCompletedOnboarding && !inOnboarding) {
-      router.replace("/onboarding");
-    } else if (profile.hasCompletedOnboarding && inOnboarding) {
-      router.replace("/(tabs)");
-    }
+      const inOnboarding = segments[0] === "onboarding";
+
+      if (!profile.hasCompletedOnboarding && !inOnboarding) {
+        router.replace("/onboarding");
+      } else if (profile.hasCompletedOnboarding && inOnboarding) {
+        router.replace("/(tabs)");
+      }
+    };
+
+    hideAndNavigate();
   }, [profile, isLoading, segments, router]);
+
+  if (isLoading) {
+    return null;
+  }
 
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
@@ -41,10 +51,6 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
-
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
