@@ -326,7 +326,7 @@ export default function GeneratorScreen() {
           gorpcore: "Gorpcore: Driven by outdoor pursuits. Technical, performance-oriented apparel. Cropped windbreakers, cargo pants, trail-running shoes (Salomon, Hoka). Functional, durable fabrics. Stylish, rugged aesthetic for everyday city wear. Think outdoor-meets-urban - practical with style.",
           retro: "Retro Throwback: Resurgence of '70s, '80s, and '90s fashion. Wide-leg or distressed denim, vintage graphic tees. Classic sneaker silhouettes (Nike Air Force 1, New Balance 574). Nostalgic yet current. Think throwback vibes - timeless classics reimagined.",
           sportyflex: "Sporty Flex: Athletic-inspired wear prioritizing movement and comfort. Track pants, cropped tops/jackets, performance sneakers. Easily transitions from active to casual social settings. Coordinated athletic brands. Think athleisure elevated - functional meets fashionable.",
-          samebrand: "Same Brand: Create cohesive looks by using only items from the same brand. All Nike, all Adidas, or all from another brand. This creates a unified, sponsored-athlete aesthetic. Perfect for brand enthusiasts who want a coordinated, professional look. Think brand loyalty - head-to-toe coordination."
+          samebrand: "Same Brand: Create cohesive looks by using only items from the same brand. Every piece should match the brand for a unified aesthetic. This creates a coordinated, professional look with consistent brand identity. Think brand loyalty - head-to-toe coordination from a single brand."
         };
         return guides[style];
       };

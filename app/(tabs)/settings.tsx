@@ -268,7 +268,7 @@ export default function SettingsScreen() {
       gorpcore: "Driven by the rise in outdoor pursuits, this trend incorporates technical, performance-oriented apparel like cropped windbreakers, cargo pants, and trail-running shoes from brands like Salomon or Hoka. It blends functional, durable fabrics with a stylish, rugged aesthetic for everyday city wear.",
       retro: "A resurgence of '70s, '80s, and '90s-inspired fashion is prominent. This includes wide-leg or distressed denim, vintage graphic tees, and classic sneaker silhouettes like the Nike Air Force 1 or New Balance 574. The look evokes a sense of nostalgia while still feeling current.",
       sportyflex: "This aesthetic focuses on athletic-inspired wear, such as track pants, cropped tops/jackets, and performance sneakers. It prioritizes movement and comfort, easily transitioning from an active setting to a casual social one.",
-      samebrand: "This style creates cohesive looks by using only items from the same brand. Whether it's an all-Nike look, all-Adidas, or another brand, this approach creates a unified, coordinated aesthetic. Perfect for brand enthusiasts who want a head-to-toe branded appearance.",
+      samebrand: "This style creates cohesive looks by using only items from the same brand. All pieces should be from one brand for a unified, coordinated aesthetic. Perfect for brand enthusiasts who want a head-to-toe branded appearance with consistent design language.",
     };
     return descriptions[styleId] || "";
   };
