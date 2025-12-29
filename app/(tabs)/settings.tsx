@@ -9,13 +9,13 @@ import {
   Platform,
 } from "react-native";
 import { Stack } from "expo-router";
-import { Download, Upload, Trash2, Info } from "lucide-react-native";
+import { Download, Upload, Trash2, Info, Palette } from "lucide-react-native";
 import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { File, Paths } from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useWardrobe, useWardrobeStats } from "../../contexts/WardrobeContext";
-import { COLORS } from "../../constants/styles";
+import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
 
 const WARDROBE_STORAGE_KEY = "wardrobe_items";
 const OUTFITS_STORAGE_KEY = "saved_outfits";
@@ -261,6 +261,18 @@ export default function SettingsScreen() {
     }
   };
 
+  const getStyleFullDescription = (styleId: string): string => {
+    const descriptions: Record<string, string> = {
+      streetwear: "Streetwear remains a dominant force, characterized by relaxed, casual pieces such as oversized hoodies, graphic tees, and joggers or baggy jeans. The focus is on a laid-back, urban look where premium, often limited-edition sneakers serve as a central statement piece of the outfit.",
+      minimalist: "A sleeker approach where clean, simple designs take precedence. Outfits often feature neutral color palettes, tailored pieces (like trousers or a blazer), and low-profile, refined sneakers, such as the Adidas Samba or classic white leather options. This style offers a more mature and sophisticated look that still incorporates the comfort of sneakers.",
+      gorpcore: "Driven by the rise in outdoor pursuits, this trend incorporates technical, performance-oriented apparel like cropped windbreakers, cargo pants, and trail-running shoes from brands like Salomon or Hoka. It blends functional, durable fabrics with a stylish, rugged aesthetic for everyday city wear.",
+      retro: "A resurgence of '70s, '80s, and '90s-inspired fashion is prominent. This includes wide-leg or distressed denim, vintage graphic tees, and classic sneaker silhouettes like the Nike Air Force 1 or New Balance 574. The look evokes a sense of nostalgia while still feeling current.",
+      sportyflex: "This aesthetic focuses on athletic-inspired wear, such as track pants, cropped tops/jackets, and performance sneakers. It prioritizes movement and comfort, easily transitioning from an active setting to a casual social one.",
+      samebrand: "This style creates cohesive looks by using only items from the same brand. Whether it's an all-Nike look, all-Adidas, or another brand, this approach creates a unified, coordinated aesthetic. Perfect for brand enthusiasts who want a head-to-toe branded appearance.",
+    };
+    return descriptions[styleId] || "";
+  };
+
   const handleDeleteAll = () => {
     Alert.alert(
       "Delete All Items",
@@ -295,6 +307,25 @@ export default function SettingsScreen() {
         }}
       />
       <ScrollView style={styles.scrollView}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Palette size={20} color={COLORS.text} />
+            <Text style={styles.sectionTitle}>Outfit Styles</Text>
+          </View>
+          <Text style={styles.sectionDescription}>
+            Learn about each style to better tag your wardrobe items.
+          </Text>
+          {OUTFIT_STYLES.map((style) => (
+            <View key={style.id} style={styles.styleInfoCard}>
+              <View style={styles.styleInfoHeader}>
+                <Text style={styles.styleInfoEmoji}>{style.emoji}</Text>
+                <Text style={styles.styleInfoLabel}>{style.label}</Text>
+              </View>
+              <Text style={styles.styleInfoDescription}>{getStyleFullDescription(style.id)}</Text>
+            </View>
+          ))}
+        </View>
+
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Info size={20} color={COLORS.text} />
@@ -462,5 +493,32 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: "center" as const,
     lineHeight: 18,
+  },
+  styleInfoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
+  },
+  styleInfoHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+    marginBottom: 8,
+  },
+  styleInfoEmoji: {
+    fontSize: 24,
+  },
+  styleInfoLabel: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  styleInfoDescription: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
 });

@@ -60,6 +60,7 @@ export default function AddItemScreen() {
   const [selectedOutfitStyles, setSelectedOutfitStyles] = useState<OutfitStyle[]>([]);
   const [isPartOfSet, setIsPartOfSet] = useState(false);
   const [setId, setSetId] = useState("");
+  const [fit, setFit] = useState("");
   const [showAccuracyRating, setShowAccuracyRating] = useState(false);
   const [lastIdentificationData, setLastIdentificationData] = useState<{
     type: 'photo' | 'name';
@@ -146,6 +147,7 @@ export default function AddItemScreen() {
         setSelectedOutfitStyles(editingItem.outfitStyles || []);
         setIsPartOfSet(editingItem.isPartOfSet || false);
         setSetId(editingItem.setId || "");
+        setFit(editingItem.fit || "");
       } else {
         setCategory(params.category || "sneaker");
         setName("");
@@ -169,6 +171,7 @@ export default function AddItemScreen() {
         setSelectedOutfitStyles([]);
         setIsPartOfSet(false);
         setSetId("");
+        setFit("");
         setLastIdentificationData(null);
         setShowAccuracyRating(false);
         setIsIdentifyingShoe(false);
@@ -1035,6 +1038,7 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       outfitStyles: selectedOutfitStyles.length > 0 ? selectedOutfitStyles : undefined,
       isPartOfSet: isPartOfSet && setId ? true : undefined,
       setId: isPartOfSet && setId ? setId : undefined,
+      fit: fit.trim() || undefined,
     };
 
     console.log(editingItem ? "[Edit Item] Updating:" : "[Add Item] Saving:", item);
@@ -1639,6 +1643,26 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
               })}
             </View>
           </View>
+
+          {(category === "top" || category === "bottom") && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Fit</Text>
+              <Text style={styles.helperText}>How does this item fit?</Text>
+              <View style={styles.fitButtonsContainer}>
+                {["Tight", "Slim", "Regular", "Relaxed", "Oversized"].map((fitOption) => (
+                  <TouchableOpacity
+                    key={fitOption}
+                    style={[styles.fitButton, fit === fitOption && styles.fitButtonActive]}
+                    onPress={() => setFit(fitOption)}
+                  >
+                    <Text style={[styles.fitButtonText, fit === fitOption && styles.fitButtonTextActive]}>
+                      {fitOption}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {editingItem && editingItem.dateLastWorn && (
             <View style={styles.inputGroup}>
@@ -2325,6 +2349,31 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   matchingSetButtonTextActive: {
+    color: "#FFF",
+  },
+  fitButtonsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  fitButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: COLORS.surface,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  fitButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  fitButtonText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+  },
+  fitButtonTextActive: {
     color: "#FFF",
   },
 });

@@ -325,7 +325,8 @@ export default function GeneratorScreen() {
           minimalist: "Minimalist Wave / Quiet Luxury: Sleeker approach with clean, simple designs. Neutral color palettes dominate. Tailored pieces like trousers or blazers. Low-profile, refined sneakers (Adidas Samba, classic white leather). Mature and sophisticated look. Think less is more - quality over quantity.",
           gorpcore: "Gorpcore: Driven by outdoor pursuits. Technical, performance-oriented apparel. Cropped windbreakers, cargo pants, trail-running shoes (Salomon, Hoka). Functional, durable fabrics. Stylish, rugged aesthetic for everyday city wear. Think outdoor-meets-urban - practical with style.",
           retro: "Retro Throwback: Resurgence of '70s, '80s, and '90s fashion. Wide-leg or distressed denim, vintage graphic tees. Classic sneaker silhouettes (Nike Air Force 1, New Balance 574). Nostalgic yet current. Think throwback vibes - timeless classics reimagined.",
-          sportyflex: "Sporty Flex: Athletic-inspired wear prioritizing movement and comfort. Track pants, cropped tops/jackets, performance sneakers. Easily transitions from active to casual social settings. Coordinated athletic brands. Think athleisure elevated - functional meets fashionable."
+          sportyflex: "Sporty Flex: Athletic-inspired wear prioritizing movement and comfort. Track pants, cropped tops/jackets, performance sneakers. Easily transitions from active to casual social settings. Coordinated athletic brands. Think athleisure elevated - functional meets fashionable.",
+          samebrand: "Same Brand: Create cohesive looks by using only items from the same brand. All Nike, all Adidas, or all from another brand. This creates a unified, sponsored-athlete aesthetic. Perfect for brand enthusiasts who want a coordinated, professional look. Think brand loyalty - head-to-toe coordination."
         };
         return guides[style];
       };
@@ -393,7 +394,7 @@ Consider:
 - Outer layer: ${shouldIncludeOuterLayer ? 'REQUIRED - Select sweatshirt or outerwear due to cool weather' : 'Optional - Only add if weather/style demands it, otherwise use -1'}
 - Layering: When using outer layer, ensure base layer colors work well underneath
 - For bottoms: consider the activity level (jeans for casual, gym shorts for athletic, etc.)
-- CRITICAL BRAND RULE: Never mix Adidas and Nike items in the same outfit. If any item is Adidas, all other branded items must be Adidas or non-branded. Same applies for Nike.
+- CRITICAL BRAND RULE: ${style === 'samebrand' ? 'SAME BRAND STYLE - ALL items must be from the same brand. If you select a Nike item, ALL other items must be Nike (or unbranded if no Nike option exists). Same for Adidas, New Balance, etc. This is MANDATORY for this style.' : 'Never mix Adidas and Nike items in the same outfit. If any item is Adidas, all other branded items must be Adidas or non-branded. Same applies for Nike.'}
 ${lockedContext ? "- IMPORTANT: Match new items to coordinate with the locked items above" : ""}
 
 Prioritize items marked with the current season.${feedbackContext}`
@@ -430,7 +431,7 @@ Consider:
 - Outer layer: ${shouldIncludeOuterLayer ? 'REQUIRED - Select sweatshirt or outerwear due to cool weather' : 'Optional - Only add if weather/style demands it, otherwise use -1'}
 - Layering: When using outer layer, ensure base layer colors work well underneath
 - For bottoms: consider the activity level (jeans for casual, gym shorts for athletic, etc.)
-- CRITICAL BRAND RULE: Never mix Adidas and Nike items in the same outfit. If any item is Adidas, all other branded items must be Adidas or non-branded. Same applies for Nike.
+- CRITICAL BRAND RULE: ${style === 'samebrand' ? 'SAME BRAND STYLE - ALL items must be from the same brand. If you select a Nike item, ALL other items must be Nike (or unbranded if no Nike option exists). Same for Adidas, New Balance, etc. This is MANDATORY for this style.' : 'Never mix Adidas and Nike items in the same outfit. If any item is Adidas, all other branded items must be Adidas or non-branded. Same applies for Nike.'}
 ${lockedContext ? "- IMPORTANT: Match new items to coordinate with the locked items above" : ""}
 
 Prioritize items marked with the current season.${feedbackContext}`;

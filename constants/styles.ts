@@ -4,6 +4,7 @@ export const OUTFIT_STYLES = [
   { id: "gorpcore" as const, label: "Gorpcore", emoji: "⛰️", description: "Technical outerwear, cargo pants, trail runners" },
   { id: "retro" as const, label: "Retro Throwback", emoji: "📼", description: "'70s-'90s vibes, wide-leg denim, classic kicks" },
   { id: "sportyflex" as const, label: "Sporty Flex", emoji: "⚡", description: "Track pants, athletic wear, performance sneakers" },
+  { id: "samebrand" as const, label: "Same Brand", emoji: "🏷️", description: "Coordinated all-Nike or all-Adidas looks" },
 ];
 
 export const COLORS = {
