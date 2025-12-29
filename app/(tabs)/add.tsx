@@ -58,6 +58,8 @@ export default function AddItemScreen() {
   const [isIdentifyingShoe, setIsIdentifyingShoe] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [selectedOutfitStyles, setSelectedOutfitStyles] = useState<OutfitStyle[]>([]);
+  const [isPartOfSet, setIsPartOfSet] = useState(false);
+  const [setId, setSetId] = useState("");
   const [showAccuracyRating, setShowAccuracyRating] = useState(false);
   const [lastIdentificationData, setLastIdentificationData] = useState<{
     type: 'photo' | 'name';
@@ -142,6 +144,8 @@ export default function AddItemScreen() {
         setSelectedSeasons(editingItem.seasons || []);
         setSubtype(editingItem.subtype);
         setSelectedOutfitStyles(editingItem.outfitStyles || []);
+        setIsPartOfSet(editingItem.isPartOfSet || false);
+        setSetId(editingItem.setId || "");
       } else {
         setCategory(params.category || "sneaker");
         setName("");
@@ -163,6 +167,8 @@ export default function AddItemScreen() {
         setSelectedSeasons([]);
         setSubtype(undefined);
         setSelectedOutfitStyles([]);
+        setIsPartOfSet(false);
+        setSetId("");
       }
     }, [editingItem, params.category])
   );
@@ -1020,6 +1026,8 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
       dateLastWorn: editingItem ? editingItem.dateLastWorn : undefined,
       timesWorn: editingItem ? editingItem.timesWorn : 0,
       outfitStyles: selectedOutfitStyles.length > 0 ? selectedOutfitStyles : undefined,
+      isPartOfSet: isPartOfSet && setId ? true : undefined,
+      setId: isPartOfSet && setId ? setId : undefined,
     };
 
     console.log(editingItem ? "[Edit Item] Updating:" : "[Add Item] Saving:", item);
@@ -1551,6 +1559,49 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
                   );
                 })}
               </View>
+            </View>
+          )}
+
+          {(category === "top" || category === "bottom") && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Matching Set</Text>
+              <Text style={styles.helperText}>Is this part of a matching top + bottom set?</Text>
+              <View style={styles.matchingSetContainer}>
+                <TouchableOpacity
+                  style={[styles.matchingSetButton, !isPartOfSet && styles.matchingSetButtonActive]}
+                  onPress={() => {
+                    setIsPartOfSet(false);
+                    setSetId("");
+                  }}
+                >
+                  <Text style={[styles.matchingSetButtonText, !isPartOfSet && styles.matchingSetButtonTextActive]}>
+                    No
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.matchingSetButton, isPartOfSet && styles.matchingSetButtonActive]}
+                  onPress={() => setIsPartOfSet(true)}
+                >
+                  <Text style={[styles.matchingSetButtonText, isPartOfSet && styles.matchingSetButtonTextActive]}>
+                    Yes
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {isPartOfSet && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={styles.label}>Set Name/ID</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={setId}
+                    onChangeText={setSetId}
+                    placeholder="e.g., Nike Tech Fleece Gray Set"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
+                  <Text style={styles.helperText}>
+                    💡 Use the same Set Name for the matching {category === "top" ? "bottom" : "top"} so the AI knows they go together
+                  </Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -2242,5 +2293,31 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "700" as const,
+  },
+  matchingSetContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  matchingSetButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  matchingSetButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  matchingSetButtonText: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+  },
+  matchingSetButtonTextActive: {
+    color: "#FFF",
   },
 });

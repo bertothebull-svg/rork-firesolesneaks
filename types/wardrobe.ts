@@ -3,7 +3,7 @@ export type ItemCategory = "sneaker" | "top" | "bottom" | "hat" | "sock";
 export type TopSubtype = "tshirt" | "polo" | "sweatshirt" | "outerwear" | "buttondown";
 export type BottomSubtype = "jeans" | "sweatpants" | "shorts" | "gymshorts" | "dressslacks";
 
-export type OutfitStyle = "urban" | "preppy" | "dad" | "stylish" | "casual" | "sporty" | "nineties" | "workappropriate";
+export type OutfitStyle = "streetwear" | "minimalist" | "gorpcore" | "retro" | "sportyflex";
 
 export type Season = "spring" | "summer" | "fall" | "winter";
 
@@ -29,6 +29,8 @@ export interface WardrobeItem {
   timesWorn?: number;
   subtype?: TopSubtype | BottomSubtype;
   outfitStyles?: OutfitStyle[];
+  isPartOfSet?: boolean;
+  setId?: string;
 }
 
 export interface SavedOutfit {

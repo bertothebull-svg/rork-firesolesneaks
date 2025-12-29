@@ -41,7 +41,7 @@ export default function GeneratorScreen() {
   const { weather, recommendedSeason } = useWeather();
   const { addFeedback, getImprovementContext, isAddingFeedback } = useFeedback();
   const { profile } = useUserProfile();
-  const [selectedStyle, setSelectedStyle] = useState<OutfitStyle>("urban");
+  const [selectedStyle, setSelectedStyle] = useState<OutfitStyle>("streetwear");
   const [includeHat, setIncludeHat] = useState(false);
   const [minDaysSinceWorn, setMinDaysSinceWorn] = useState<MinDaysSinceWorn>(7);
   const [useAirMaxMonth, setUseAirMaxMonth] = useState(false);
@@ -321,14 +321,11 @@ export default function GeneratorScreen() {
       
       const getStyleGuidance = (style: OutfitStyle): string => {
         const guides: Record<OutfitStyle, string> = {
-          urban: "Urban style: Street-ready and bold. Mix high and low fashion. Prioritize statement sneakers as the focal point. Coordinate with neutral or complementary tones in tops/bottoms. Layer strategically with hoodies, bombers, or denim jackets. Think streetwear culture - clean lines, confident colors, modern edge.",
-          preppy: "Preppy style: Clean, classic, polished. Favor neutral colors (navy, white, khaki, pastels). Coordinate subtle patterns (stripes, checks). Keep sneakers understated - white, navy, or earth tones. Button-downs, polos, chinos. Think country club, Ivy League - timeless and refined.",
-          dad: "Dad style: Comfortable and relaxed. Prioritize fit over fashion. Mix casual basics - t-shirts, jeans, New Balance or running shoes. Use muted, safe colors (grays, blues, beiges). Avoid trendy pieces. Think practical comfort - what feels good matters most. Sneakers should be classic, comfortable models.",
-          stylish: "Stylish/Fashion-forward: Trend-aware and put-together. Take calculated risks with color and silhouette. Layer thoughtfully. Sneakers can be bold or minimal depending on outfit balance. Mix textures and proportions. Think editorial, Instagram-worthy - carefully curated and intentional.",
-          casual: "Casual style: Easy, effortless everyday wear. Basic wardrobe staples. Comfortable fits. Versatile colors that mix easily (grays, blacks, denim, earth tones). Sneakers are functional first. Think grab-and-go simplicity - no overthinking, just works.",
-          sporty: "Sporty/Athletic style: Performance-inspired aesthetic. Favor athletic brands, technical fabrics, sporty silhouettes. Coordinate brand families (all Nike, all Adidas). Use athletic color blocking. Include track pants, joggers, performance tees. Sneakers are statement pieces - running, training, or basketball models.",
-          nineties: "90's style: Bold, loud, vibrant. Embrace color clashing - neon greens, hot pinks, electric blues, bright yellows, bold purples together. Mix multiple bright colors fearlessly. Oversized fits, baggy jeans, graphic tees. Chunky retro sneaker silhouettes. Think Fresh Prince, hip-hop golden age - more is more.",
-          workappropriate: "Work appropriate/Professional: Office-ready polish. Business casual standards. Neutral, sophisticated colors (charcoal, navy, black, white). Clean sneakers in leather or minimal designs. Pair with chinos, dress pants, button-downs, blazers. Think modern professional - put-together but not stuffy."
+          streetwear: "Streetwear: Dominant force characterized by relaxed, casual pieces. Oversized hoodies, graphic tees, joggers or baggy jeans. Premium, often limited-edition sneakers serve as central statement piece. Mix high and low fashion. Bold colors and confident style. Think urban culture - modern edge with comfort.",
+          minimalist: "Minimalist Wave / Quiet Luxury: Sleeker approach with clean, simple designs. Neutral color palettes dominate. Tailored pieces like trousers or blazers. Low-profile, refined sneakers (Adidas Samba, classic white leather). Mature and sophisticated look. Think less is more - quality over quantity.",
+          gorpcore: "Gorpcore: Driven by outdoor pursuits. Technical, performance-oriented apparel. Cropped windbreakers, cargo pants, trail-running shoes (Salomon, Hoka). Functional, durable fabrics. Stylish, rugged aesthetic for everyday city wear. Think outdoor-meets-urban - practical with style.",
+          retro: "Retro Throwback: Resurgence of '70s, '80s, and '90s fashion. Wide-leg or distressed denim, vintage graphic tees. Classic sneaker silhouettes (Nike Air Force 1, New Balance 574). Nostalgic yet current. Think throwback vibes - timeless classics reimagined.",
+          sportyflex: "Sporty Flex: Athletic-inspired wear prioritizing movement and comfort. Track pants, cropped tops/jackets, performance sneakers. Easily transitions from active to casual social settings. Coordinated athletic brands. Think athleisure elevated - functional meets fashionable."
         };
         return guides[style];
       };

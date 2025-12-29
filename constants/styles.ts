@@ -1,12 +1,9 @@
 export const OUTFIT_STYLES = [
-  { id: "urban" as const, label: "Urban", emoji: "🏙️", description: "Street-ready, bold looks" },
-  { id: "preppy" as const, label: "Preppy", emoji: "👔", description: "Clean, classic style" },
-  { id: "dad" as const, label: "Dad", emoji: "👨", description: "Comfortable, relaxed vibes" },
-  { id: "stylish" as const, label: "Stylish", emoji: "✨", description: "Fashion-forward fits" },
-  { id: "casual" as const, label: "Casual", emoji: "👕", description: "Easy, everyday wear" },
-  { id: "sporty" as const, label: "Sporty", emoji: "⚡", description: "Athletic, active style" },
-  { id: "nineties" as const, label: "90's Style", emoji: "📼", description: "Loud colors, bold vibes" },
-  { id: "workappropriate" as const, label: "Work Appropriate", emoji: "💼", description: "Professional, office-ready" },
+  { id: "streetwear" as const, label: "Streetwear", emoji: "🏙️", description: "Oversized hoodies, graphic tees, premium sneakers" },
+  { id: "minimalist" as const, label: "Minimalist Wave", emoji: "🤍", description: "Clean lines, neutral palettes, refined sneakers" },
+  { id: "gorpcore" as const, label: "Gorpcore", emoji: "⛰️", description: "Technical outerwear, cargo pants, trail runners" },
+  { id: "retro" as const, label: "Retro Throwback", emoji: "📼", description: "'70s-'90s vibes, wide-leg denim, classic kicks" },
+  { id: "sportyflex" as const, label: "Sporty Flex", emoji: "⚡", description: "Track pants, athletic wear, performance sneakers" },
 ];
 
 export const COLORS = {
