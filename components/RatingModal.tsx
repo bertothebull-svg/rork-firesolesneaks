@@ -8,9 +8,10 @@ import {
   StyleSheet,
   TextInput,
   ActivityIndicator,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { COLORS } from "../constants/styles";
 
@@ -67,93 +68,90 @@ export default function RatingModal({
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.keyboardView}
-        >
-          <View style={styles.modalContainer}>
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <X size={24} color={COLORS.textSecondary} />
-            </TouchableOpacity>
-
-            <ScrollView
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={true}
-              keyboardShouldPersistTaps="handled"
-              bounces={true}
-              scrollEnabled={true}
-            >
-            <Text style={styles.title}>{title}</Text>
-            <Text style={styles.description}>{description}</Text>
-
-            <View style={styles.starsContainer}>
-              {([1, 2, 3, 4, 5] as const).map((rating) => (
-                <TouchableOpacity
-                  key={rating}
-                  style={styles.starButton}
-                  onPress={() => handleRatingSelect(rating)}
-                  disabled={isSubmitting}
-                >
-                  <Star
-                    size={40}
-                    color={selectedRating && rating <= selectedRating ? "#FFD700" : COLORS.border}
-                    fill={selectedRating && rating <= selectedRating ? "#FFD700" : "transparent"}
-                  />
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.overlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardView}
+          >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={styles.modalContainer}>
+                <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                  <X size={24} color={COLORS.textSecondary} />
                 </TouchableOpacity>
-              ))}
-            </View>
 
-            {showCommentInput && (
-              <View style={styles.commentContainer}>
-                <View style={styles.commentHeader}>
-                  <MessageCircle size={20} color={COLORS.primary} />
-                  <Text style={styles.commentLabel}>
-                    Help us improve! What could be better?
-                  </Text>
+                <Text style={styles.title}>{title}</Text>
+                <Text style={styles.description}>{description}</Text>
+
+                <View style={styles.starsContainer}>
+                  {([1, 2, 3, 4, 5] as const).map((rating) => (
+                    <TouchableOpacity
+                      key={rating}
+                      style={styles.starButton}
+                      onPress={() => handleRatingSelect(rating)}
+                      disabled={isSubmitting}
+                    >
+                      <Star
+                        size={40}
+                        color={selectedRating && rating <= selectedRating ? "#FFD700" : COLORS.border}
+                        fill={selectedRating && rating <= selectedRating ? "#FFD700" : "transparent"}
+                      />
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                <TextInput
-                  style={styles.commentInput}
-                  placeholder="e.g., Colors don't match, wrong brand mixing..."
-                  placeholderTextColor={COLORS.textSecondary}
-                  value={comment}
-                  onChangeText={setComment}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  editable={!isSubmitting}
-                />
-              </View>
-            )}
 
-            <View style={styles.actions}>
-              <TouchableOpacity
-                style={styles.skipButton}
-                onPress={handleClose}
-                disabled={isSubmitting}
-              >
-                <Text style={styles.skipButtonText}>Skip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.submitButton,
-                  selectedRating === null && styles.submitButtonDisabled,
-                ]}
-                onPress={handleSubmit}
-                disabled={selectedRating === null || isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Submit</Text>
+                {showCommentInput && (
+                  <View style={styles.commentContainer}>
+                    <View style={styles.commentHeader}>
+                      <MessageCircle size={20} color={COLORS.primary} />
+                      <Text style={styles.commentLabel}>
+                        Help us improve! What could be better?
+                      </Text>
+                    </View>
+                    <TextInput
+                      style={styles.commentInput}
+                      placeholder="e.g., Colors don't match, wrong brand mixing..."
+                      placeholderTextColor={COLORS.textSecondary}
+                      value={comment}
+                      onChangeText={setComment}
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                      editable={!isSubmitting}
+                      returnKeyType="done"
+                      blurOnSubmit={true}
+                    />
+                  </View>
                 )}
-              </TouchableOpacity>
-            </View>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+
+                <View style={styles.actions}>
+                  <TouchableOpacity
+                    style={styles.skipButton}
+                    onPress={handleClose}
+                    disabled={isSubmitting}
+                  >
+                    <Text style={styles.skipButtonText}>Skip</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.submitButton,
+                      selectedRating === null && styles.submitButtonDisabled,
+                    ]}
+                    onPress={handleSubmit}
+                    disabled={selectedRating === null || isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator size="small" color="#FFF" />
+                    ) : (
+                      <Text style={styles.submitButtonText}>Submit</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -166,13 +164,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   keyboardView: {
-    width: "100%",
+    width: "90%",
     maxWidth: 400,
-    maxHeight: "90%",
-    marginHorizontal: 20,
   },
   modalContainer: {
-    flex: 1,
     backgroundColor: COLORS.background,
     borderRadius: 24,
     padding: 24,
@@ -181,14 +176,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 8,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingTop: 20,
-    paddingBottom: 40,
-    flexGrow: 1,
   },
   closeButton: {
     position: "absolute",
