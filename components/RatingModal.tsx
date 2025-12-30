@@ -9,6 +9,9 @@ import {
   TextInput,
   ActivityIndicator,
   Dimensions,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { COLORS } from "../constants/styles";
 
@@ -67,79 +70,89 @@ export default function RatingModal({
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <View style={styles.modalContainer}>
           <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
             <X size={24} color={COLORS.textSecondary} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.description}>{description}</Text>
 
-          <View style={styles.starsContainer}>
-            {([1, 2, 3, 4, 5] as const).map((rating) => (
+            <View style={styles.starsContainer}>
+              {([1, 2, 3, 4, 5] as const).map((rating) => (
+                <TouchableOpacity
+                  key={rating}
+                  style={styles.starButton}
+                  onPress={() => handleRatingSelect(rating)}
+                  disabled={isSubmitting}
+                >
+                  <Star
+                    size={40}
+                    color={selectedRating && rating <= selectedRating ? "#FFD700" : COLORS.border}
+                    fill={selectedRating && rating <= selectedRating ? "#FFD700" : "transparent"}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {showCommentInput && (
+              <View style={styles.commentContainer}>
+                <View style={styles.commentHeader}>
+                  <MessageCircle size={20} color={COLORS.primary} />
+                  <Text style={styles.commentLabel}>
+                    Help us improve! What could be better?
+                  </Text>
+                </View>
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="e.g., Colors don't match, wrong brand mixing..."
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={comment}
+                  onChangeText={setComment}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  editable={!isSubmitting}
+                />
+              </View>
+            )}
+
+            <View style={styles.actions}>
               <TouchableOpacity
-                key={rating}
-                style={styles.starButton}
-                onPress={() => handleRatingSelect(rating)}
+                style={styles.skipButton}
+                onPress={handleClose}
                 disabled={isSubmitting}
               >
-                <Star
-                  size={40}
-                  color={selectedRating && rating <= selectedRating ? "#FFD700" : COLORS.border}
-                  fill={selectedRating && rating <= selectedRating ? "#FFD700" : "transparent"}
-                />
+                <Text style={styles.skipButtonText}>Skip</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-
-          {showCommentInput && (
-            <View style={styles.commentContainer}>
-              <View style={styles.commentHeader}>
-                <MessageCircle size={20} color={COLORS.primary} />
-                <Text style={styles.commentLabel}>
-                  Help us improve! What could be better?
-                </Text>
-              </View>
-              <TextInput
-                style={styles.commentInput}
-                placeholder="e.g., Colors don't match, wrong brand mixing..."
-                placeholderTextColor={COLORS.textSecondary}
-                value={comment}
-                onChangeText={setComment}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-                editable={!isSubmitting}
-              />
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  selectedRating === null && styles.submitButtonDisabled,
+                ]}
+                onPress={handleSubmit}
+                disabled={selectedRating === null || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit</Text>
+                )}
+              </TouchableOpacity>
             </View>
-          )}
-
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.skipButton}
-              onPress={handleClose}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.skipButtonText}>Skip</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                selectedRating === null && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={selectedRating === null || isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.submitButtonText}>Submit</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -154,6 +167,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     width: Math.min(width - 40, 400),
+    maxHeight: "85%",
     backgroundColor: COLORS.background,
     borderRadius: 24,
     padding: 24,
@@ -162,6 +176,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 8,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 20,
   },
   closeButton: {
     position: "absolute",
