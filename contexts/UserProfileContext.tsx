@@ -17,9 +17,12 @@ export const [UserProfileProvider, useUserProfile] = createContextHook(() => {
     queryKey: ["userProfile"],
     queryFn: async (): Promise<UserProfile> => {
       try {
+        console.log("[UserProfile] Starting to load profile...");
         const stored = await AsyncStorage.getItem(USER_PROFILE_STORAGE_KEY);
+        console.log("[UserProfile] AsyncStorage returned:", stored ? `data (${stored.length} chars)` : "null");
+        
         if (!stored || stored.trim().length === 0) {
-          console.log("[UserProfile] No stored profile");
+          console.log("[UserProfile] No stored profile, using default");
           return defaultProfile;
         }
 
@@ -31,6 +34,9 @@ export const [UserProfileProvider, useUserProfile] = createContextHook(() => {
         return defaultProfile;
       }
     },
+    retry: 1,
+    retryDelay: 500,
+    staleTime: 0,
   });
 
   const updateProfileMutation = useMutation({
