@@ -8,14 +8,11 @@ import {
   StyleSheet,
   TextInput,
   ActivityIndicator,
-  Dimensions,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
 import { COLORS } from "../constants/styles";
-
-const { width } = Dimensions.get("window");
 
 interface RatingModalProps {
   visible: boolean;
@@ -70,21 +67,24 @@ export default function RatingModal({
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <View style={styles.modalContainer}>
-          <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-            <X size={24} color={COLORS.textSecondary} />
-          </TouchableOpacity>
+      <View style={styles.overlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.keyboardView}
+        >
+          <View style={styles.modalContainer}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+              <X size={24} color={COLORS.textSecondary} />
+            </TouchableOpacity>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={true}
+              keyboardShouldPersistTaps="handled"
+              bounces={true}
+              scrollEnabled={true}
+            >
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.description}>{description}</Text>
 
@@ -150,9 +150,10 @@ export default function RatingModal({
                 )}
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -163,11 +164,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.6)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+  },
+  keyboardView: {
+    width: "100%",
+    maxWidth: 400,
+    maxHeight: "90%",
+    marginHorizontal: 20,
   },
   modalContainer: {
-    width: Math.min(width - 40, 400),
-    maxHeight: "85%",
+    flex: 1,
     backgroundColor: COLORS.background,
     borderRadius: 24,
     padding: 24,
@@ -182,6 +187,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 20,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
   closeButton: {
     position: "absolute",
