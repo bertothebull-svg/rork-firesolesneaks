@@ -67,6 +67,8 @@ export default function AddItemScreen() {
     input: string;
     output: any;
   } | null>(null);
+  const [imageOptions, setImageOptions] = useState<string[]>([]);
+  const [showImageSelector, setShowImageSelector] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -186,109 +188,72 @@ export default function AddItemScreen() {
 
 
   const searchRealImageMutation = useMutation({
-    mutationFn: async (searchQuery: string) => {
-      console.log("[Google Image Search] Starting search for:", searchQuery);
+    mutationFn: async (params: { searchQuery: string; styleCode?: string; brand?: string; model?: string }) => {
+      const { searchQuery, styleCode, brand, model } = params;
+      console.log("[Google Image Search] Starting ENHANCED search");
+      console.log("[Google Image Search] Query:", searchQuery);
+      console.log("[Google Image Search] Style Code:", styleCode);
+      console.log("[Google Image Search] Brand:", brand);
+      console.log("[Google Image Search] Model:", model);
       
       const apiKey = "AIzaSyB9-RfXjy3thqsZFdidu5PfdF_Sk5y3XqU";
       const cseId = "0467351eca7a74120";
       
-      const prioritySites = [
-        "stockx.com",
-        "goat.com",
-        "flightclub.com",
-        "stadiumgoods.com",
-        "sneakernews.com",
-        "nike.com",
-        "adidas.com",
-        "newbalance.com"
-      ];
+      const allImageUrls: string[] = [];
       
-      const siteRestriction = prioritySites.map(site => `site:${site}`).join(" OR ");
-      const refinedQuery = `${searchQuery} sneaker product image (${siteRestriction})`;
+      const queries = [];
       
-      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(refinedQuery)}&searchType=image&num=10&imgSize=large&imgType=photo&safe=off`;
+      if (styleCode) {
+        queries.push(`${styleCode} ${brand || ""} ${model || ""} product`.trim());
+        queries.push(`${styleCode} stockx`);
+        queries.push(`${styleCode} goat`);
+      }
       
-      console.log("[Google Image Search] Refined query:", refinedQuery);
-      console.log("[Google Image Search] Fetching from Google Custom Search API...");
+      queries.push(searchQuery);
+      queries.push(`${searchQuery} stockx`);
+      queries.push(`${searchQuery} goat official product image`);
       
-      try {
-        const response = await fetch(searchUrl);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("[Google Image Search] API Error:", response.status, errorText);
+      console.log("[Google Image Search] Will try", queries.length, "different search strategies");
+      
+      for (const query of queries.slice(0, 3)) {
+        try {
+          console.log("[Google Image Search] Trying query:", query);
+          const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}&searchType=image&num=10&imgSize=large&imgType=photo&safe=off`;
           
-          if (response.status === 429) {
-            throw new Error("Search rate limit exceeded. Please try again in a few minutes.");
-          }
-          throw new Error(`Google API error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("[Google Image Search] Received", data.items?.length || 0, "results");
-        
-        if (!data.items || data.items.length === 0) {
-          console.log("[Google Image Search] No results with site restriction, trying broader search");
+          const response = await fetch(searchUrl);
           
-          const searches = [
-            `${searchQuery} official product image`,
-            `${searchQuery} sneaker stockx`,
-            `${searchQuery} sneaker goat`,
-            `${searchQuery} product photo`
-          ];
-          
-          for (const query of searches) {
-            console.log("[Google Image Search] Trying fallback:", query);
-            const fallbackUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}&searchType=image&num=5&imgSize=large&imgType=photo`;
-            const fallbackResponse = await fetch(fallbackUrl);
-            
-            if (fallbackResponse.ok) {
-              const fallbackData = await fallbackResponse.json();
-              if (fallbackData.items && fallbackData.items.length > 0) {
-                console.log("[Google Image Search] Found", fallbackData.items.length, "results with fallback:", query);
-                return fallbackData.items[0].link;
-              }
+          if (!response.ok) {
+            console.error("[Google Image Search] API Error:", response.status);
+            if (response.status === 429) {
+              throw new Error("Search rate limit exceeded. Please try again in a few minutes.");
             }
-            
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          
-          throw new Error("No images found for this sneaker");
-        }
-        
-        for (const item of data.items) {
-          const imageUrl = item.link;
-          const pageUrl = item.image?.contextLink || "";
-          console.log("[Google Image Search] Testing image from:", pageUrl);
-          console.log("[Google Image Search] Image URL:", imageUrl?.substring(0, 100));
-          
-          if (!imageUrl) continue;
-          
-          try {
-            const testResponse = await fetch(imageUrl, { method: 'HEAD', timeout: 5000 } as any);
-            if (testResponse.ok) {
-              const contentType = testResponse.headers.get('content-type');
-              if (contentType && contentType.startsWith('image/')) {
-                console.log("[Google Image Search] Found working image from:", pageUrl);
-                return imageUrl;
-              }
-            }
-          } catch (e) {
-            console.log("[Google Image Search] Image validation failed:", e);
             continue;
           }
+          
+          const data = await response.json();
+          console.log("[Google Image Search] Got", data.items?.length || 0, "results for this query");
+          
+          if (data.items && data.items.length > 0) {
+            for (const item of data.items) {
+              if (item.link && !allImageUrls.includes(item.link)) {
+                allImageUrls.push(item.link);
+              }
+            }
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          console.error("[Google Image Search] Query failed:", query, error);
         }
-        
-        if (data.items[0]?.link) {
-          console.log("[Google Image Search] Using first result without validation");
-          return data.items[0].link;
-        }
-        
-        throw new Error("No accessible images found");
-      } catch (error) {
-        console.error("[Google Image Search] Error:", error);
-        throw error;
       }
+      
+      console.log("[Google Image Search] Total unique images found:", allImageUrls.length);
+      
+      if (allImageUrls.length === 0) {
+        throw new Error("No images found for this sneaker");
+      }
+      
+      return allImageUrls.slice(0, 12);
     },
   });
 
@@ -502,28 +467,32 @@ Return ONLY the JSON object.`;
 
       let imageFound = false;
       if (result.imageSearchQuery) {
-        console.log("[Sneaker Search] Fetching real image with query:", result.imageSearchQuery);
+        console.log("[Sneaker Search] Fetching multiple image options with enhanced search");
         
-        const fallbackQueries = [
-          result.imageSearchQuery,
-          `${result.brand} ${result.model} ${result.styleCode || ""}`.trim(),
-          `${result.brand} ${result.silhouette} ${result.colorway}`.trim(),
-          `${result.brand} ${result.style || result.colorway}`.trim(),
-        ].filter((q, i, arr) => arr.indexOf(q) === i);
-        
-        for (const query of fallbackQueries) {
-          try {
-            console.log("[Sneaker Search] Trying image query:", query);
-            const imageUrl = await searchRealImageMutation.mutateAsync(query);
-            console.log("[Sneaker Search] Got image URL:", imageUrl);
-            setImageUri(imageUrl);
+        try {
+          const imageUrls = await searchRealImageMutation.mutateAsync({
+            searchQuery: result.imageSearchQuery,
+            styleCode: result.styleCode,
+            brand: result.brand,
+            model: result.model
+          });
+          
+          console.log("[Sneaker Search] Got", imageUrls.length, "image options");
+          
+          if (imageUrls.length > 0) {
+            setImageOptions(imageUrls);
+            setImageUri(imageUrls[0]);
             setImageError(false);
             imageFound = true;
-            break;
-          } catch (imageError) {
-            console.error("[Sneaker Search] Image query failed:", query, imageError);
-            continue;
+            
+            if (imageUrls.length > 1) {
+              setTimeout(() => {
+                setShowImageSelector(true);
+              }, 800);
+            }
           }
+        } catch (imageError) {
+          console.error("[Sneaker Search] Image search failed:", imageError);
         }
         
         if (!imageFound) {
@@ -1756,6 +1725,51 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
         description={`How accurate was this ${lastIdentificationData?.type === 'photo' ? 'image recognition' : 'search result'}?`}
         isSubmitting={isAddingFeedback}
       />
+
+      {showImageSelector && imageOptions.length > 1 && (
+        <View style={styles.imageSelectorOverlay}>
+          <View style={styles.imageSelectorModal}>
+            <View style={styles.imageSelectorHeader}>
+              <Text style={styles.imageSelectorTitle}>Choose the Correct Colorway</Text>
+              <TouchableOpacity onPress={() => setShowImageSelector(false)} style={styles.imageSelectorClose}>
+                <Text style={styles.imageSelectorCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.imageSelectorSubtitle}>Tap the image that matches the exact colorway</Text>
+            <ScrollView style={styles.imageSelectorScroll}>
+              <View style={styles.imageSelectorGrid}>
+                {imageOptions.map((url, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.imageSelectorOption,
+                      imageUri === url && styles.imageSelectorOptionSelected
+                    ]}
+                    onPress={() => {
+                      setImageUri(url);
+                      setImageError(false);
+                      setShowImageSelector(false);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: url }}
+                      style={styles.imageSelectorImage}
+                      contentFit="cover"
+                      placeholder={require("../../assets/images/icon.png")}
+                      placeholderContentFit="contain"
+                    />
+                    {imageUri === url && (
+                      <View style={styles.imageSelectorCheckmark}>
+                        <Text style={styles.imageSelectorCheckmarkText}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -2407,5 +2421,96 @@ const styles = StyleSheet.create({
   },
   fitButtonTextActive: {
     color: "#FFF",
+  },
+  imageSelectorOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  imageSelectorModal: {
+    backgroundColor: COLORS.background,
+    borderRadius: 20,
+    width: "100%",
+    maxHeight: "90%",
+    overflow: "hidden",
+  },
+  imageSelectorHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  imageSelectorTitle: {
+    fontSize: 18,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  imageSelectorSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  imageSelectorClose: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageSelectorCloseText: {
+    fontSize: 24,
+    color: COLORS.textSecondary,
+    fontWeight: "400" as const,
+  },
+  imageSelectorScroll: {
+    maxHeight: 500,
+  },
+  imageSelectorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    padding: 16,
+    gap: 12,
+  },
+  imageSelectorOption: {
+    width: "48%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 3,
+    borderColor: "transparent",
+    position: "relative",
+  },
+  imageSelectorOptionSelected: {
+    borderColor: COLORS.primary,
+  },
+  imageSelectorImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imageSelectorCheckmark: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageSelectorCheckmarkText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700" as const,
   },
 });
