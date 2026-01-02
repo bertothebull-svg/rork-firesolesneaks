@@ -189,8 +189,8 @@ export default function AddItemScreen() {
     mutationFn: async (searchQuery: string) => {
       console.log("[Google Image Search] Starting search for:", searchQuery);
       
-      const apiKey = "AIzaSyDp5mxz65t5b83aNYSzs3-93K4D9gxwB-w";
-      const cseId = "c486b626b912943df";
+      const apiKey = "AIzaSyB9-RfXjy3thqsZFdidu5PfdF_Sk5y3XqU";
+      const cseId = "0467351eca7a74120";
       
       const prioritySites = [
         "stockx.com",
