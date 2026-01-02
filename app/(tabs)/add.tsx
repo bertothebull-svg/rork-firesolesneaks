@@ -196,8 +196,16 @@ export default function AddItemScreen() {
       console.log("[Google Image Search] Brand:", brand);
       console.log("[Google Image Search] Model:", model);
       
-      const apiKey = "AIzaSyB9-RfXjy3thqsZFdidu5PfdF_Sk5y3XqU";
-      const cseId = "0467351eca7a74120";
+      const apiKey = process.env.EXPO_PUBLIC_GOOGLE_API_KEY;
+      const cseId = process.env.EXPO_PUBLIC_GOOGLE_CSE_ID;
+      
+      if (!apiKey || !cseId) {
+        console.error("[Google Image Search] Missing API credentials");
+        throw new Error("Google Search API not configured");
+      }
+      
+      console.log("[Google Image Search] Using API Key:", apiKey.substring(0, 10) + "...");
+      console.log("[Google Image Search] Using CSE ID:", cseId);
       
       const allImageUrls: string[] = [];
       
