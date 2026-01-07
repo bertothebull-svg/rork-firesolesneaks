@@ -632,233 +632,52 @@ Return ONLY the JSON object.`;
       
       console.log("[Shoe Identification] Analyzing shoe with AI...");
       
-      const prompt = `You are an elite sneaker authenticator with forensic-level expertise. Your task is to analyze this shoe image with EXTREME PRECISION, focusing on every visible detail that distinguishes this EXACT shoe from similar models.
+      const prompt = `Analyze this sneaker image and identify the EXACT shoe with correct colorway.
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
-🎯 CRITICAL MISSION: Identify the EXACT colorway by analyzing EVERY SURFACE of the shoe.
+STEP 1 - COLOR EXTRACTION (DO THIS FIRST):
+Describe the ACTUAL COLORS you see on each part:
+- Toe box: [exact color/shade]
+- Side panels: [exact color/shade]
+- Heel: [exact color/shade]
+- Swoosh/logos: [exact color]
+- Midsole: [exact color - white/cream/colored]
+- Outsole: [exact color if visible]
+- Laces: [exact color]
+- Collar: [exact color]
 
-⚠️ MAJOR PROBLEM TO SOLVE:
-The AI often correctly identifies the SILHOUETTE (e.g., "Air Jordan 1 High") but then GUESSES THE WRONG COLORWAY.
-You MUST analyze the ACTUAL COLORS visible in THIS SPECIFIC IMAGE on EVERY SURFACE and match them to the correct colorway variant.
+STEP 2 - IDENTIFY SHOE:
+- Brand: Nike, Adidas, Jordan, New Balance, etc.
+- Silhouette: Air Jordan 1 High/Mid/Low, Dunk High/Low, etc.
+- Colorway: Match the EXACT colors from Step 1 to official colorway name
+  * Examples: "Chicago" = white/black/red, "Bred" = black/red, "University Blue" = light blue/white/black
+  * Use official names from StockX/GOAT, not generic descriptions
 
-DO NOT assume a colorway - EXTRACT the actual colors you SEE on each surface first, THEN match to known releases.
+STEP 3 - VERIFICATION:
+- SKU/Style Code if visible on tag
+- Materials: leather, suede, etc.
+- Special features: collaborations, unique details
 
-⚠️ COMMON MISTAKES TO AVOID:
-- Identifying the silhouette correctly but guessing a popular colorway without checking actual colors
-- Only looking at the outline/silhouette and not examining individual surfaces
-- Confusing similar colorways (e.g., "University Blue" vs "Powder Blue" vs "Royal Blue")
-- Not analyzing the EXACT shade of each surface separately
-- Missing midsole or outsole color details
-- Not noticing swoosh/logo colors
-- Overlooking collaboration markers (Off-White, Travis Scott, Fragment)
-- Not noticing material differences (leather vs suede vs patent)
-- Ignoring small branding differences (Nike Air vs Jumpman)
+CRITICAL: The colorway MUST match the actual colors you see in Step 1. Don't guess based on silhouette alone.
 
-🔬 FORENSIC SURFACE-BY-SURFACE COLOR ANALYSIS:
-
-🎨 STEP 0: EXTRACT COLORS FROM EVERY VISIBLE SURFACE (DO THIS FIRST!):
-
-You MUST analyze these surfaces separately and describe the EXACT color of each:
-
-1. **UPPER SURFACES** (describe color of EACH visible panel):
-   - Toe box/toe cap: What EXACT color and shade?
-   - Side panels (lateral/medial): What EXACT color and shade? Same as toe or different?
-   - Heel counter/heel panel: What EXACT color and shade?
-   - Collar/ankle area: What EXACT color and shade?
-   - Tongue: What EXACT color and shade?
-   - Quarter panels: What EXACT color and shade?
-
-2. **SWOOSH/LOGO**:
-   - Swoosh color: What EXACT color? (Black, White, Red, Blue, etc.)
-   - Swoosh material: Leather, patent, embroidered?
-   - Heel logo: What color?
-   - Tongue logo/tag: What color?
-
-3. **MIDSOLE** (CRITICAL - often missed):
-   - Midsole color: Pure white, off-white, cream, sail, colored?
-   - Any colored accents on midsole?
-   - Midsole texture/material visible?
-
-4. **OUTSOLE** (CRITICAL - often missed):
-   - Outsole color: What EXACT color? (Often different from midsole)
-   - Rubber color: Clear/translucent, black, gum, colored?
-   - Tread pattern color if visible
-
-5. **LACES**:
-   - Lace color: What EXACT color?
-   - Do laces match any panel color or contrast?
-
-6. **STITCHING**:
-   - Stitching color: Does it match or contrast with panels?
-   - Any unique stitching patterns or colors?
-
-7. **COLOR BLOCKING PATTERN**:
-   - How are the colors arranged? Which surfaces have which colors?
-   - Is there a dominant color? What percentage of the shoe?
-   - Are there accent colors? Where are they located?
-
-📝 EXAMPLE OF PROPER SURFACE ANALYSIS:
-"SURFACE ANALYSIS:
-- Toe box: Light sky blue (UNC blue shade, not royal or powder)
-- Side panels: White leather
-- Heel: Light sky blue (matches toe box)
-- Collar: White
-- Swoosh: Black (contrasts with light blue and white)
-- Tongue: White with black Jumpman logo
-- Midsole: White/Sail with light blue accent near heel
-- Outsole: Light blue translucent rubber
-- Laces: White
-- Stitching: White on blue panels, matches surfaces
-
-COLOR BLOCKING: This creates the classic UNC pattern - light blue toe and heel, white mid-panels, which identifies this as the 'University Blue' colorway, NOT 'Powder Blue' (which is lighter) or 'Royal Blue' (which is darker/more vibrant)."
-
-Only AFTER this detailed surface analysis should you match to known colorways.
-
-1️⃣ BRAND IDENTIFICATION (Look at tongue, heel, insole, lace tags):
-   - What logos are visible? Where exactly?
-   - What text appears on tongue tags?
-   - Any collaboration branding visible?
-
-2️⃣ SILHOUETTE CONFIRMATION (Be extremely specific):
-   - Exact model name (Air Jordan 1 HIGH vs MID vs LOW)
-   - OG, Retro, Retro High OG, or other variant?
-   - Special edition markers visible?
-
-3️⃣ COLORWAY FORENSICS (THIS IS THE MOST CRITICAL STEP - BE PRECISE):
-   - Use the colors you EXTRACTED in Step 0
-   - Match those EXACT colors to known colorway releases
-   - Do NOT assume a colorway based on the silhouette alone
-   - PANEL-BY-PANEL color analysis with EXACT shades:
-     * Toe box: What EXACT shade? (e.g., "light powder blue" vs "university blue" vs "royal blue")
-     * Side panel: EXACT shade and is it different from toe box?
-     * Heel panel: EXACT shade - same as toe or different?
-     * Swoosh/logo: What color? Black? White? Colored?
-     * Collar/ankle area: EXACT shade
-     * Midsole: White? Off-white? Colored? Multiple colors?
-     * Outsole: EXACT color if visible
-     * Laces: What color are the laces?
-   - Use official colorway names that match these EXACT shades:
-     * "University Blue" = specific light blue shade (UNC blue)
-     * "Royal Blue" = bright vibrant blue
-     * "Powder Blue" = very light pastel blue
-     * "Navy" = dark blue
-     * "Bred" = black and red
-     * "Chicago" = white, red, and black in specific pattern
-   - Color blocking pattern unique to this colorway
-   - Any gradient, fade, or aged effects?
-
-4️⃣ MATERIAL IDENTIFICATION:
-   - Smooth leather, tumbled leather, or patent leather?
-   - Suede, nubuck, or synthetic materials?
-   - Mesh, canvas, or textured fabrics?
-   - Material differences between panels
-
-5️⃣ DISTINGUISHING FEATURES:
-   - Stitching color (matches panels or contrasts?)
-   - Visible SKU or text anywhere?
-   - Special details: reflective, glow-in-dark, translucent
-   - Unique lace colors or aglet (lace tip) details
-   - Heel tab shape and markings
-
-🎯 CRITICAL DETAILS:
-6. Swoosh/Logo: Exact curve, thickness, material, placement on shoe
-7. Midsole: Color, texture, visible tech (Air, Boost, Zoom, React)
-8. Outsole: Tread pattern, color, herringbone vs other patterns
-9. Tongue: Thickness, padding, tag style and text
-10. Collar/Ankle: Height, padding, material
-11. Toebox: Shape (boxy vs slim), perforations, panel overlays
-12. Heel: Tab shape, logo placement, height, stability features
-13. Lacing System: Eyelet count, lace type (flat/round), metal vs fabric
-14. Special Features: Reflective elements, glow-in-dark, translucent materials, special textures
-15. Branding Elements: Heel logos, tongue tags, insole prints, special text
-
-📊 DATABASE CROSS-REFERENCE:
-- GOAT.com: Official product names, authentication photos, market prices
-- StockX.com: SKU verification, bid/ask prices, verified sales
-- Poison.com: International releases, regional exclusives
-- SneakerFreaker.com: Historical context, detailed specs, special editions
-- NYKL.com: Additional market data, rare variants
-
-🏷️ SKU/STYLE CODE IDENTIFICATION:
-- Nike format: 6 digits + dash + 3 digits (e.g., 555088-134)
-- Adidas format: Letters + numbers (e.g., GZ0541)
-- New Balance format: Model + colorway code (e.g., 550BB)
-- Visible on: size tag, box label, insole
-
-💡 MATCHING STRATEGY:
-1. Identify base silhouette with 100% certainty
-2. Match exact colorway using specific color names from official releases
-3. Verify with SKU if visible or deducible
-4. Cross-check material types against known releases
-5. Confirm special features against marketplace listings
-6. Distinguish between OG, Retro, PE, and collaboration versions
-
-⚠️ COMMON PITFALLS TO AVOID:
-- Don't confuse Jordan 1 High with Mid (ankle collar height is key)
-- Distinguish SB Dunk from regular Dunk (thicker tongue, Zoom Air)
-- Specify exact year for popular colorways with multiple releases
-- Use official colorway names not generic descriptions ("University Blue" not "light blue")
-- Include collaboration details if applicable (Off-White, Travis Scott, etc.)
-
-🎯 ACCURACY REQUIREMENTS:
-- If you can see 3+ distinctive features that match a specific colorway → HIGH confidence
-- If you can identify model but colorway is uncertain → MEDIUM confidence  
-- If multiple colorways are possible → LOW confidence (and list why)
-
-📝 REQUIRED JSON FORMAT:
+Return ONLY valid JSON:
 {
-  "brand": "exact official brand (Nike, Air Jordan, Adidas Yeezy, New Balance, etc.)",
-  "model": "complete official product name as it appears on GOAT/StockX",
-  "silhouette": "precise silhouette with height/type (Air Jordan 1 Retro High OG, Nike Dunk Low, etc.)",
-  "surfaceAnalysis": "CRITICAL: List the EXACT color of each visible surface. Format: 'Toe box: [exact shade], Side panels: [exact shade], Heel: [exact shade], Swoosh: [exact color], Midsole: [exact shade], Outsole: [exact color], Laces: [exact color]'. Be extremely specific about shades.",
-  "extractedColors": "List ALL distinct colors you SEE in this specific image with exact shades (e.g., 'light sky blue on toe/heel, white on mid-panels, black swoosh, white midsole with blue accents, light blue outsole')",
-  "colorway": "official colorway name that MATCHES the extractedColors and surfaceAnalysis above - BE EXTREMELY SPECIFIC. This MUST match the EXACT colors you see on each surface. Examples: 'University Blue' (specific UNC light blue), 'Royal Blue' (vibrant blue), 'Powder Blue' (pastel blue), 'Bred' (black and red), 'Chicago' (white/red/black). Do NOT use generic 'blue' or 'red' - use the SPECIFIC official colorway name that matches these exact shades you listed in extractedColors.",
-  "colorwayConfidence": "Explain WHY this colorway matches based on your surface analysis. Reference specific surfaces: 'The light blue on toe and heel matches UNC blue, not royal blue. The white side panels and black swoosh confirm this is University Blue, not Powder Blue which has different blocking.'",
-  "style": "popular nickname or collaboration name",
-  "name": "full combined product name",
-  "commonName": "how it's listed on major marketplaces",
-  "styleCode": "official SKU/Style Code if visible or deducible from unique features",
-  "colors": ["all visible colors using EXACT names that match what you see in the image - 'University Blue', 'Sail', 'Crimson Tint', 'Black', 'White'. These should match your extractedColors."],
-  "mainColors": ["2-3 dominant colors with official names"],
-  "accentColors": ["secondary/accent colors with official names"],
-  "panelByPanelColors": "CRITICAL: describe the EXACT shade of color on each visible surface with maximum detail. Format as structured list:
-    • Toe box/toe cap: [exact color and shade]
-    • Side panels (lateral): [exact color and shade]
-    • Side panels (medial): [exact color and shade if visible]
-    • Heel counter: [exact color and shade]
-    • Collar/ankle: [exact color and shade]
-    • Tongue: [exact color and shade]
-    • Swoosh (lateral): [exact color]
-    • Swoosh (medial): [exact color if visible]
-    • Heel logo: [color]
-    • Midsole: [exact color - white/off-white/sail/cream/colored]
-    • Midsole accents: [any colored details]
-    • Outsole: [exact color of rubber]
-    • Laces: [exact color]
-    • Stitching: [color]
-    Be extremely specific about shades and note which surfaces share the same color.",
-  "retailPrice": "original retail price USD (number only, best estimate)",
-  "marketValue": "current average resale USD (number only, recent market data)",
-  "releaseYear": "year of release if identifiable",
-  "releaseDate": "specific date if identifiable (MM/DD/YYYY)",
-  "materials": "detailed material breakdown by panel (be specific: smooth leather, tumbled leather, suede, etc.)",
-  "materialDetails": "specific material types and textures observed on each section",
-  "distinguishingFeatures": "CRITICAL: List 5+ unique identifiers that distinguish this EXACT colorway from similar ones. Focus on the specific color shades and where they appear. Example: 'Light sky blue (not royal blue) on toe box and heel, white mid-panels create specific blocking pattern, black swoosh contrasts with blue, UNC university blue shade (not powder blue or royal)'.",
-  "specialFeatures": "reflective, glow, special laces, unique materials, collaboration markers",
-  "confidence": "high (identified 5+ unique features), medium (identified model + likely colorway), low (model identified but colorway uncertain)",
-  "confidenceReason": "explain WHY you gave this confidence rating. CRITICAL: Mention if the colors you extracted match the colorway you identified. Example: 'High confidence because the light blue shade I see matches University Blue (UNC), not other blues like Royal or Powder. The specific color blocking with white mid-panels confirms this is the University Blue colorway, not another blue variant.'",
-  "alternativePossibilities": "if not HIGH confidence, list other possible colorways and why",
-  "searchQuery": "the MOST SPECIFIC search query to verify this shoe: Brand + Model + Colorway + Year + SKU if known",
-  "description": "comprehensive technical description focusing on what makes this colorway unique"
-}
-
-🎯 CONFIDENCE LEVELS:
-- HIGH: Can identify SKU, exact colorway match, all details align with known release
-- MEDIUM: Strong silhouette and colorway match, missing SKU confirmation
-- LOW: Base model identified but colorway/variant uncertain
-
-RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use official marketplace terminology.`;
+  "brand": "official brand name",
+  "model": "full model name",
+  "silhouette": "base silhouette",
+  "colorway": "OFFICIAL colorway name matching Step 1 colors",
+  "extractedColors": "colors seen in Step 1",
+  "styleCode": "SKU if visible",
+  "colors": ["list of all colors with specific shades"],
+  "mainColors": ["2-3 dominant colors"],
+  "accentColors": ["accent colors"],
+  "retailPrice": "number only",
+  "marketValue": "number only",
+  "confidence": "high/medium/low",
+  "confidenceReason": "why this confidence level based on color matching",
+  "searchQuery": "Brand Model Colorway SKU for image search"
+}`;
 
       let aiResponse;
       try {
