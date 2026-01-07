@@ -376,14 +376,33 @@ Return ONLY the JSON object.`;
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
-          const jsonString = jsonMatch[0].trim();
-          console.log("[Sneaker Search] Attempting to parse:", jsonString);
+          let jsonString = jsonMatch[0].trim();
+          
+          if (jsonString.startsWith('object')) {
+            jsonString = jsonString.substring(6).trim();
+          }
+          
+          if (!jsonString.startsWith('{')) {
+            const firstBrace = jsonString.indexOf('{');
+            if (firstBrace !== -1) {
+              jsonString = jsonString.substring(firstBrace);
+            }
+          }
+          
+          if (!jsonString.endsWith('}')) {
+            const lastBrace = jsonString.lastIndexOf('}');
+            if (lastBrace !== -1) {
+              jsonString = jsonString.substring(0, lastBrace + 1);
+            }
+          }
+          
+          console.log("[Sneaker Search] Attempting to parse:", jsonString.substring(0, 200));
           const data = JSON.parse(jsonString);
           console.log("[Sneaker Search] Parsed JSON:", data);
           return data;
         } catch (e) {
           console.error("[Sneaker Search] JSON parse error:", e);
-          console.error("[Sneaker Search] Attempted to parse:", jsonMatch[0]);
+          console.error("[Sneaker Search] Attempted to parse:", jsonMatch[0].substring(0, 200));
         }
       }
       
@@ -883,7 +902,26 @@ RETURN ONLY THE JSON OBJECT. Be as specific and accurate as possible. Use offici
 
       let result;
       try {
-        const jsonString = jsonMatch[0];
+        let jsonString = jsonMatch[0];
+        
+        if (jsonString.startsWith('object')) {
+          jsonString = jsonString.substring(6).trim();
+        }
+        
+        if (!jsonString.startsWith('{')) {
+          const firstBrace = jsonString.indexOf('{');
+          if (firstBrace !== -1) {
+            jsonString = jsonString.substring(firstBrace);
+          }
+        }
+        
+        if (!jsonString.endsWith('}')) {
+          const lastBrace = jsonString.lastIndexOf('}');
+          if (lastBrace !== -1) {
+            jsonString = jsonString.substring(0, lastBrace + 1);
+          }
+        }
+        
         console.log("[Shoe Identification] Attempting to parse JSON:", jsonString.substring(0, 300));
         result = JSON.parse(jsonString);
         console.log("[Shoe Identification] Successfully parsed result:", JSON.stringify(result).substring(0, 300));
