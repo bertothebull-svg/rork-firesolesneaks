@@ -617,36 +617,84 @@ Return ONLY the JSON object.`;
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
-🎯 CRITICAL MISSION: Identify the EXACT colorway and variant, not just the general model.
+🎯 CRITICAL MISSION: Identify the EXACT colorway by analyzing EVERY SURFACE of the shoe.
 
 ⚠️ MAJOR PROBLEM TO SOLVE:
 The AI often correctly identifies the SILHOUETTE (e.g., "Air Jordan 1 High") but then GUESSES THE WRONG COLORWAY.
-You MUST analyze the ACTUAL COLORS visible in THIS SPECIFIC IMAGE and match them to the correct colorway variant.
+You MUST analyze the ACTUAL COLORS visible in THIS SPECIFIC IMAGE on EVERY SURFACE and match them to the correct colorway variant.
 
-DO NOT assume a colorway - EXTRACT the actual colors you SEE in the image first, THEN match to known releases.
+DO NOT assume a colorway - EXTRACT the actual colors you SEE on each surface first, THEN match to known releases.
 
 ⚠️ COMMON MISTAKES TO AVOID:
 - Identifying the silhouette correctly but guessing a popular colorway without checking actual colors
+- Only looking at the outline/silhouette and not examining individual surfaces
 - Confusing similar colorways (e.g., "University Blue" vs "Powder Blue" vs "Royal Blue")
-- Not analyzing the EXACT shade of each color panel
-- Missing year-specific details (2015 release vs 2023 retro)
+- Not analyzing the EXACT shade of each surface separately
+- Missing midsole or outsole color details
+- Not noticing swoosh/logo colors
 - Overlooking collaboration markers (Off-White, Travis Scott, Fragment)
 - Not noticing material differences (leather vs suede vs patent)
 - Ignoring small branding differences (Nike Air vs Jumpman)
 
-🔬 FORENSIC ANALYSIS CHECKLIST:
+🔬 FORENSIC SURFACE-BY-SURFACE COLOR ANALYSIS:
 
-🎨 STEP 0: COLOR EXTRACTION FROM IMAGE (DO THIS FIRST!):
-Before identifying the shoe, EXTRACT all visible colors from the image:
-   - What exact shades do you see? (light blue vs medium blue vs dark blue vs navy)
-   - List every distinct color panel and its specific shade
-   - Note if colors are vibrant, muted, pastel, or dark
-   - Identify any unique color combinations that stand out
-   - Look for subtle color differences between panels
-   
-   EXAMPLE: "I see a light sky blue on the toe and heel, white on mid-panel and collar, black swoosh, black laces, white midsole with blue accents"
-   
-   Only AFTER extracting actual colors should you match to known colorways.
+🎨 STEP 0: EXTRACT COLORS FROM EVERY VISIBLE SURFACE (DO THIS FIRST!):
+
+You MUST analyze these surfaces separately and describe the EXACT color of each:
+
+1. **UPPER SURFACES** (describe color of EACH visible panel):
+   - Toe box/toe cap: What EXACT color and shade?
+   - Side panels (lateral/medial): What EXACT color and shade? Same as toe or different?
+   - Heel counter/heel panel: What EXACT color and shade?
+   - Collar/ankle area: What EXACT color and shade?
+   - Tongue: What EXACT color and shade?
+   - Quarter panels: What EXACT color and shade?
+
+2. **SWOOSH/LOGO**:
+   - Swoosh color: What EXACT color? (Black, White, Red, Blue, etc.)
+   - Swoosh material: Leather, patent, embroidered?
+   - Heel logo: What color?
+   - Tongue logo/tag: What color?
+
+3. **MIDSOLE** (CRITICAL - often missed):
+   - Midsole color: Pure white, off-white, cream, sail, colored?
+   - Any colored accents on midsole?
+   - Midsole texture/material visible?
+
+4. **OUTSOLE** (CRITICAL - often missed):
+   - Outsole color: What EXACT color? (Often different from midsole)
+   - Rubber color: Clear/translucent, black, gum, colored?
+   - Tread pattern color if visible
+
+5. **LACES**:
+   - Lace color: What EXACT color?
+   - Do laces match any panel color or contrast?
+
+6. **STITCHING**:
+   - Stitching color: Does it match or contrast with panels?
+   - Any unique stitching patterns or colors?
+
+7. **COLOR BLOCKING PATTERN**:
+   - How are the colors arranged? Which surfaces have which colors?
+   - Is there a dominant color? What percentage of the shoe?
+   - Are there accent colors? Where are they located?
+
+📝 EXAMPLE OF PROPER SURFACE ANALYSIS:
+"SURFACE ANALYSIS:
+- Toe box: Light sky blue (UNC blue shade, not royal or powder)
+- Side panels: White leather
+- Heel: Light sky blue (matches toe box)
+- Collar: White
+- Swoosh: Black (contrasts with light blue and white)
+- Tongue: White with black Jumpman logo
+- Midsole: White/Sail with light blue accent near heel
+- Outsole: Light blue translucent rubber
+- Laces: White
+- Stitching: White on blue panels, matches surfaces
+
+COLOR BLOCKING: This creates the classic UNC pattern - light blue toe and heel, white mid-panels, which identifies this as the 'University Blue' colorway, NOT 'Powder Blue' (which is lighter) or 'Royal Blue' (which is darker/more vibrant)."
+
+Only AFTER this detailed surface analysis should you match to known colorways.
 
 1️⃣ BRAND IDENTIFICATION (Look at tongue, heel, insole, lace tags):
    - What logos are visible? Where exactly?
@@ -744,8 +792,10 @@ Before identifying the shoe, EXTRACT all visible colors from the image:
   "brand": "exact official brand (Nike, Air Jordan, Adidas Yeezy, New Balance, etc.)",
   "model": "complete official product name as it appears on GOAT/StockX",
   "silhouette": "precise silhouette with height/type (Air Jordan 1 Retro High OG, Nike Dunk Low, etc.)",
-  "extractedColors": "List ALL distinct colors you SEE in this specific image with exact shades (e.g., 'light sky blue on toe/heel, white on mid-panels, black swoosh, white midsole')",
-  "colorway": "official colorway name that MATCHES the extractedColors above - BE EXTREMELY SPECIFIC. This MUST match the EXACT colors you see in the image. Examples: 'University Blue' (specific UNC light blue), 'Royal Blue' (vibrant blue), 'Powder Blue' (pastel blue), 'Bred' (black and red), 'Chicago' (white/red/black). Do NOT use generic 'blue' or 'red' - use the SPECIFIC official colorway name that matches these exact shades you listed in extractedColors.",
+  "surfaceAnalysis": "CRITICAL: List the EXACT color of each visible surface. Format: 'Toe box: [exact shade], Side panels: [exact shade], Heel: [exact shade], Swoosh: [exact color], Midsole: [exact shade], Outsole: [exact color], Laces: [exact color]'. Be extremely specific about shades.",
+  "extractedColors": "List ALL distinct colors you SEE in this specific image with exact shades (e.g., 'light sky blue on toe/heel, white on mid-panels, black swoosh, white midsole with blue accents, light blue outsole')",
+  "colorway": "official colorway name that MATCHES the extractedColors and surfaceAnalysis above - BE EXTREMELY SPECIFIC. This MUST match the EXACT colors you see on each surface. Examples: 'University Blue' (specific UNC light blue), 'Royal Blue' (vibrant blue), 'Powder Blue' (pastel blue), 'Bred' (black and red), 'Chicago' (white/red/black). Do NOT use generic 'blue' or 'red' - use the SPECIFIC official colorway name that matches these exact shades you listed in extractedColors.",
+  "colorwayConfidence": "Explain WHY this colorway matches based on your surface analysis. Reference specific surfaces: 'The light blue on toe and heel matches UNC blue, not royal blue. The white side panels and black swoosh confirm this is University Blue, not Powder Blue which has different blocking.'",
   "style": "popular nickname or collaboration name",
   "name": "full combined product name",
   "commonName": "how it's listed on major marketplaces",
@@ -753,7 +803,22 @@ Before identifying the shoe, EXTRACT all visible colors from the image:
   "colors": ["all visible colors using EXACT names that match what you see in the image - 'University Blue', 'Sail', 'Crimson Tint', 'Black', 'White'. These should match your extractedColors."],
   "mainColors": ["2-3 dominant colors with official names"],
   "accentColors": ["secondary/accent colors with official names"],
-  "panelByPanelColors": "CRITICAL: describe the EXACT shade of color on each visible panel: toe (exact shade), side panel (exact shade), heel (exact shade), swoosh (color), collar (color), midsole (color), outsole (color), laces (color). Be very specific about shades.",
+  "panelByPanelColors": "CRITICAL: describe the EXACT shade of color on each visible surface with maximum detail. Format as structured list:
+    • Toe box/toe cap: [exact color and shade]
+    • Side panels (lateral): [exact color and shade]
+    • Side panels (medial): [exact color and shade if visible]
+    • Heel counter: [exact color and shade]
+    • Collar/ankle: [exact color and shade]
+    • Tongue: [exact color and shade]
+    • Swoosh (lateral): [exact color]
+    • Swoosh (medial): [exact color if visible]
+    • Heel logo: [color]
+    • Midsole: [exact color - white/off-white/sail/cream/colored]
+    • Midsole accents: [any colored details]
+    • Outsole: [exact color of rubber]
+    • Laces: [exact color]
+    • Stitching: [color]
+    Be extremely specific about shades and note which surfaces share the same color.",
   "retailPrice": "original retail price USD (number only, best estimate)",
   "marketValue": "current average resale USD (number only, recent market data)",
   "releaseYear": "year of release if identifiable",
