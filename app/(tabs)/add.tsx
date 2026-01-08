@@ -86,6 +86,65 @@ export default function AddItemScreen() {
 
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const verifyShoeNameFromTitles = async (params: {
+    currentName: string;
+    currentBrand: string;
+    styleCode?: string;
+    pageTitles: string[];
+    searchQuery: string;
+  }) => {
+    const { currentName, currentBrand, styleCode, pageTitles, searchQuery } = params;
+    
+    if (!pageTitles || pageTitles.length === 0) {
+      console.log("[Name Verification] No titles to verify against");
+      return null;
+    }
+    
+    console.log("[Name Verification] Current AI name:", currentName);
+    console.log("[Name Verification] Verifying against Google results...");
+    
+    const verificationPrompt = `You are a sneaker expert. The AI initially identified this shoe as "${currentName}" from brand "${currentBrand}"${styleCode ? ` with SKU "${styleCode}"` : ''}.
+
+However, we need to verify this is correct by checking against ACTUAL product listings from StockX and GOAT.
+
+Here are the REAL page titles from Google Image Search results for the query "${searchQuery}":
+
+${pageTitles.slice(0, 10).map((title, i) => `${i + 1}. ${title}`).join('\n')}
+
+IMPORTANT INSTRUCTIONS:
+1. Look at the ACTUAL product names in these real listings
+2. If the AI's name ("${currentName}") MATCHES or is VERY SIMILAR to what's in these listings, return it unchanged
+3. If the listings show a DIFFERENT shoe name, return the CORRECT name from the listings
+4. The SKU ${styleCode ? `"${styleCode}"` : 'in the search'} should match a specific shoe - find its EXACT name in these results
+
+RETURN FORMAT:
+- If the AI name is correct: return exactly "${currentName}"
+- If incorrect: return the EXACT corrected shoe name from the Google results
+- Include the full official name (e.g., "Air Jordan 1 Retro High OG 'University Blue'")
+
+Return ONLY the shoe name, nothing else. No explanation.`;
+    
+    try {
+      const response = await generateText({ 
+        messages: [{ role: "user", content: verificationPrompt }] 
+      });
+      
+      const correctedName = response.trim().replace(/"/g, '');
+      
+      console.log("[Name Verification] Original AI name:", currentName);
+      console.log("[Name Verification] Verified/Corrected name:", correctedName);
+      
+      if (correctedName && correctedName.length > 0 && correctedName !== currentName) {
+        return correctedName;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("[Name Verification] Error:", error);
+      return null;
+    }
+  };
+
   const commonColors = [
     { name: "Black", hex: "#000000" },
     { name: "Charcoal", hex: "#1F1F1F" },
@@ -223,6 +282,7 @@ export default function AddItemScreen() {
       console.log("[Google Image Search] Using CSE ID:", cseId);
       
       const allImageUrls: string[] = [];
+      const pageTitles: string[] = [];
       
       const queries = [];
       
@@ -260,6 +320,9 @@ export default function AddItemScreen() {
             for (const item of data.items) {
               if (item.link && !allImageUrls.includes(item.link)) {
                 allImageUrls.push(item.link);
+                const title = item.title || "";
+                pageTitles.push(title);
+                console.log("[Google Image Search] Page title:", title);
               }
             }
           }
@@ -271,12 +334,13 @@ export default function AddItemScreen() {
       }
       
       console.log("[Google Image Search] Total unique images found:", allImageUrls.length);
+      console.log("[Google Image Search] Extracted page titles:", pageTitles.slice(0, 5));
       
       if (allImageUrls.length === 0) {
         throw new Error("No images found for this sneaker");
       }
       
-      return allImageUrls.slice(0, 12);
+      return { images: allImageUrls.slice(0, 12), titles: pageTitles.slice(0, 12) };
     },
   });
 
@@ -535,12 +599,14 @@ Return ONLY the JSON object.`;
     if (alt.searchQuery) {
       try {
         console.log("[Alternative Selection] Fetching images for:", alt.searchQuery);
-        const imageUrls = await searchRealImageMutation.mutateAsync({
+        const imageData = await searchRealImageMutation.mutateAsync({
           searchQuery: alt.searchQuery,
           styleCode: alt.styleCode,
           brand: alt.brand,
           model: alt.model
         });
+        
+        const imageUrls = imageData.images;
         
         if (imageUrls.length > 0) {
           setImageOptions(imageUrls);
@@ -606,16 +672,34 @@ Return ONLY the JSON object.`;
         console.log("[Sneaker Search] Fetching multiple image options with enhanced search");
         
         try {
-          const imageUrls = await searchRealImageMutation.mutateAsync({
+          const imageData = await searchRealImageMutation.mutateAsync({
             searchQuery: result.imageSearchQuery,
             styleCode: result.styleCode,
             brand: result.brand,
             model: result.model
           });
           
+          const imageUrls = imageData.images;
+          const titles = imageData.titles;
+          
           console.log("[Sneaker Search] Got", imageUrls.length, "image options");
           
           if (imageUrls.length > 0) {
+            console.log("[Sneaker Search] Verifying shoe name against Google results...");
+            
+            const correctedName = await verifyShoeNameFromTitles({
+              currentName: result.model,
+              currentBrand: result.brand,
+              styleCode: result.styleCode,
+              pageTitles: titles,
+              searchQuery: query
+            });
+            
+            if (correctedName && correctedName !== result.model) {
+              console.log("[Sneaker Search] CORRECTED NAME:", result.model, "→", correctedName);
+              setName(correctedName);
+            }
+            
             setImageOptions(imageUrls);
             if (imageUris.length === 0) {
               setImageUris([imageUrls[0]]);
