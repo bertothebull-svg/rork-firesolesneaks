@@ -293,12 +293,12 @@ export default function AddItemScreen() {
       const searchPrompt = `You are an elite sneaker identification expert with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL databases.
 
 ${feedbackContext ? feedbackContext + "\n" : ""}SEARCH QUERY: "${sneakerName}"
-${isLikelyStyleCode ? "\n🚨 CRITICAL: This appears to be a STYLE CODE/SKU. Style codes are EXACT identifiers. You MUST find the PRECISE shoe that matches this exact SKU. DO NOT guess or approximate. If you cannot find an exact match for this SKU, state so clearly." : ""}
+${isLikelyStyleCode ? "\n🚨🚨🚨 CRITICAL SKU MODE 🚨🚨🚨\n\nThis IS A STYLE CODE/SKU (Product SKU). Style codes are EXACT, UNIQUE identifiers that map to ONE specific shoe.\n\nYOU MUST:\n1. Find the EXACT shoe that has this PRECISE SKU\n2. Return the EXACT OFFICIAL MODEL NAME that matches this SKU on GOAT.com and StockX.com\n3. The 'model' field MUST contain the complete, accurate, official product name for this EXACT SKU\n4. DO NOT return a similar shoe or approximate - SKUs are EXACT matches\n5. The SKU you return MUST match the input SKU exactly\n\nExample: If user inputs '555088-134', you MUST return 'Air Jordan 1 Retro High OG University Blue' because that is the EXACT shoe for SKU 555088-134. DO NOT return 'Air Jordan 1 Chicago' or any other model.\n" : ""}
 
 YOUR MISSION:
-1. Find the EXACT shoe model with 100% accuracy
-2. ${isLikelyStyleCode ? "CRITICAL: The search query IS A STYLE CODE/SKU. This is an EXACT identifier. Find the PRECISE shoe with this exact SKU. DO NOT provide alternatives unless you're unsure - SKUs should match exactly ONE shoe." : "ALSO provide 3-5 ALTERNATIVE possible matches in case the primary match is wrong"}
-3. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com
+1. Find the EXACT shoe model with 100% accuracy - THE MODEL NAME MUST BE CORRECT FOR THE ${isLikelyStyleCode ? 'INPUT SKU' : 'SEARCH QUERY'}
+2. ${isLikelyStyleCode ? "CRITICAL: Since this is a SKU search, your PRIMARY match MUST be the exact shoe for this SKU. The 'model' field is what shows to the user as the shoe name - IT MUST BE THE CORRECT NAME FOR THIS SKU. Provide 2-3 alternatives ONLY if you're uncertain about the SKU match." : "ALSO provide 3-5 ALTERNATIVE possible matches in case the primary match is wrong"}
+3. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com - especially for the 'model' field which is displayed as the shoe name
 4. Match the official SKU/Style Code whenever possible (THIS IS CRITICAL FOR IMAGE SEARCH)
 5. Include all relevant colorway details with official names
 6. Provide accurate market pricing data
@@ -764,6 +764,8 @@ ${feedbackContext ? feedbackContext + "\n" : ""}
 ${imageUris.length > 1 ? 'IMPORTANT: You have MULTIPLE images of the same shoe from different angles. Use ALL images together to get the most accurate identification. Look at all angles, surfaces, and details across all images.\n\n' : ''}YOU MUST PROVIDE:
 1. Your PRIMARY identification (most likely match)
 2. 3-5 ALTERNATIVE possible matches ranked by likelihood
+
+IMPORTANT: The 'model' field in your response is what gets displayed to the user as the shoe name. Make sure it's the EXACT, COMPLETE, OFFICIAL product name.
 
 CRITICAL INSTRUCTIONS:
 You MUST examine EVERY surface of the shoe. Do NOT skip any part. Look at colors, materials, and details on:
