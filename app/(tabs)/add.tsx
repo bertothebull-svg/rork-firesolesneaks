@@ -287,13 +287,17 @@ export default function AddItemScreen() {
       const feedbackContext = getImprovementContext("item_identification");
       console.log("[Sneaker Search] Using feedback context:", feedbackContext);
       
+      const isLikelyStyleCode = /^[A-Z0-9]{2,}[-_]?[A-Z0-9]{2,}[-_]?[A-Z0-9]{0,}$/i.test(sneakerName.trim());
+      console.log("[Sneaker Search] Input appears to be a style code:", isLikelyStyleCode);
+      
       const searchPrompt = `You are an elite sneaker identification expert with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL databases.
 
 ${feedbackContext ? feedbackContext + "\n" : ""}SEARCH QUERY: "${sneakerName}"
+${isLikelyStyleCode ? "\n🚨 CRITICAL: This appears to be a STYLE CODE/SKU. Style codes are EXACT identifiers. You MUST find the PRECISE shoe that matches this exact SKU. DO NOT guess or approximate. If you cannot find an exact match for this SKU, state so clearly." : ""}
 
 YOUR MISSION:
 1. Find the EXACT shoe model with 100% accuracy
-2. ALSO provide 3-5 ALTERNATIVE possible matches in case the primary match is wrong
+2. ${isLikelyStyleCode ? "CRITICAL: The search query IS A STYLE CODE/SKU. This is an EXACT identifier. Find the PRECISE shoe with this exact SKU. DO NOT provide alternatives unless you're unsure - SKUs should match exactly ONE shoe." : "ALSO provide 3-5 ALTERNATIVE possible matches in case the primary match is wrong"}
 3. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com
 4. Match the official SKU/Style Code whenever possible (THIS IS CRITICAL FOR IMAGE SEARCH)
 5. Include all relevant colorway details with official names
@@ -334,6 +338,8 @@ EXAMPLES:
 Input: "bred 11" → Brand: Air Jordan, Model: "Air Jordan 11 Retro 'Bred' 2019", SKU: 378037-061, Image Search: "Air Jordan 11 Bred 378037-061"
 Input: "panda dunk" → Brand: Nike, Model: "Dunk Low 'Black White'", SKU: DD1391-100, Nickname: "Panda", Image Search: "Nike Dunk Low Black White DD1391-100"
 Input: "travis scott jordan 1" → Brand: Air Jordan x Travis Scott, Model: "Air Jordan 1 Retro High OG 'Mocha'", SKU: CD4487-100, Image Search: "Travis Scott Air Jordan 1 Mocha CD4487-100"
+Input: "555088-134" (SKU) → Brand: Air Jordan, Model: "Air Jordan 1 Retro High OG 'University Blue'", SKU: 555088-134, Image Search: "Air Jordan 1 University Blue 555088-134" [EXACT MATCH REQUIRED]
+Input: "DV1748-400" (SKU) → Must find EXACT shoe with this precise SKU - do not approximate or guess
 
 Provide information in this exact JSON format:
 {
