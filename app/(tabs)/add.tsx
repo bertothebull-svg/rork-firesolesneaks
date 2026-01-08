@@ -48,8 +48,9 @@ export default function AddItemScreen() {
   const [purchasePrice, setPurchasePrice] = useState("");
   const [marketValue, setMarketValue] = useState("");
   const [notes, setNotes] = useState("");
-  const [imageUri, setImageUri] = useState("");
-  const [imageError, setImageError] = useState(false);
+  const [imageUris, setImageUris] = useState<string[]>([]);
+  const [imageErrors, setImageErrors] = useState<{ [key: string]: boolean }>({});
+  const [modelSearch, setModelSearch] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [selectedSeasons, setSelectedSeasons] = useState<Season[]>([]);
   const [showCustomColorInput, setShowCustomColorInput] = useState(false);
@@ -156,7 +157,7 @@ export default function AddItemScreen() {
         setPurchasePrice(editingItem.purchasePrice?.toString() || "");
         setMarketValue(editingItem.marketValue?.toString() || "");
         setNotes(editingItem.notes || "");
-        setImageUri(editingItem.imageUrl);
+        setImageUris([editingItem.imageUrl]);
         setSelectedSeasons(editingItem.seasons || []);
         setSubtype(editingItem.subtype);
         setSelectedOutfitStyles(editingItem.outfitStyles || []);
@@ -179,8 +180,9 @@ export default function AddItemScreen() {
         setPurchasePrice("");
         setMarketValue("");
         setNotes("");
-        setImageUri("");
-        setImageError(false);
+        setImageUris([]);
+        setImageErrors({});
+        setModelSearch("");
         setSelectedSeasons([]);
         setSubtype(undefined);
         setSelectedOutfitStyles([]);
@@ -536,8 +538,9 @@ Return ONLY the JSON object.`;
         
         if (imageUrls.length > 0) {
           setImageOptions(imageUrls);
-          setImageUri(imageUrls[0]);
-          setImageError(false);
+          if (imageUris.length === 0) {
+            setImageUris([imageUrls[0]]);
+          }
           
           if (imageUrls.length > 1) {
             setTimeout(() => setShowImageSelector(true), 500);
@@ -607,8 +610,9 @@ Return ONLY the JSON object.`;
           
           if (imageUrls.length > 0) {
             setImageOptions(imageUrls);
-            setImageUri(imageUrls[0]);
-            setImageError(false);
+            if (imageUris.length === 0) {
+              setImageUris([imageUrls[0]]);
+            }
             imageFound = true;
             
             if (imageUrls.length > 1) {
@@ -659,14 +663,15 @@ Return ONLY the JSON object.`;
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: "images" as const,
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsMultipleSelection: true,
       quality: 0.8,
+      selectionLimit: 5,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
-      setImageError(false);
+    if (!result.canceled && result.assets.length > 0) {
+      const newUris = result.assets.map(asset => asset.uri);
+      setImageUris(prev => [...prev, ...newUris].slice(0, 5));
+      console.log("[Image Picker] Selected", newUris.length, "images. Total:", Math.min(imageUris.length + newUris.length, 5));
     }
   };
 
@@ -679,46 +684,60 @@ Return ONLY the JSON object.`;
   };
 
   const handleCameraCapture = (uri: string) => {
-    setImageUri(uri);
-    setImageError(false);
+    setImageUris(prev => [...prev, uri].slice(0, 5));
     setShowCamera(false);
+    console.log("[Camera] Captured image. Total images:", Math.min(imageUris.length + 1, 5));
   };
 
   const identifyShoeFromPhoto = async (retryCount = 0): Promise<boolean> => {
-    if (!imageUri) {
-      Alert.alert("No Photo", "Please take or select a photo first");
+    if (imageUris.length === 0) {
+      Alert.alert("No Photos", "Please take or select at least one photo first");
       return false;
     }
 
     setIsIdentifyingShoe(true);
     try {
       console.log("[Shoe Identification] Starting ENHANCED AI analysis... (Attempt " + (retryCount + 1) + "/3)");
-      console.log("[Shoe Identification] Using two-stage identification for maximum accuracy");
-      console.log("[Shoe Identification] Image URI type:", typeof imageUri);
-      console.log("[Shoe Identification] Image URI length:", imageUri.length);
+      console.log("[Shoe Identification] Analyzing", imageUris.length, "image(s) for maximum accuracy");
 
-      let base64Image = imageUri;
-      if (imageUri.startsWith('file://') || (!imageUri.startsWith('data:') && !imageUri.startsWith('http'))) {
-        console.log("[Shoe Identification] Converting file URI to base64...");
-        try {
-          const response = await fetch(imageUri);
-          const blob = await response.blob();
-          const reader = new FileReader();
-          base64Image = await new Promise<string>((resolve, reject) => {
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          console.log("[Shoe Identification] Converted to base64, length:", base64Image.length);
-        } catch (convError) {
-          console.error("[Shoe Identification] Error converting to base64:", convError);
-          throw new Error("Failed to process image. Please try again with a different photo.");
+      const base64Images: string[] = [];
+      
+      for (let i = 0; i < imageUris.length; i++) {
+        const imageUri = imageUris[i];
+        console.log("[Shoe Identification] Processing image", i + 1, "of", imageUris.length);
+        
+        let base64Image = imageUri;
+        if (imageUri.startsWith('file://') || (!imageUri.startsWith('data:') && !imageUri.startsWith('http'))) {
+          console.log("[Shoe Identification] Converting file URI to base64...");
+          try {
+            const response = await fetch(imageUri);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            base64Image = await new Promise<string>((resolve, reject) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+            console.log("[Shoe Identification] Converted to base64, length:", base64Image.length);
+          } catch (convError) {
+            console.error("[Shoe Identification] Error converting image", i + 1, ":", convError);
+            continue;
+          }
         }
-      }
 
-      if (!base64Image.startsWith('data:image/')) {
-        throw new Error("Invalid image format. Please use a JPEG or PNG image.");
+        if (!base64Image.startsWith('data:image/')) {
+          console.error("[Shoe Identification] Invalid image format for image", i + 1);
+          continue;
+        }
+        
+        base64Images.push(base64Image);
       }
+      
+      if (base64Images.length === 0) {
+        throw new Error("Failed to process images. Please try again with different photos.");
+      }
+      
+      console.log("[Shoe Identification] Successfully processed", base64Images.length, "image(s)");
 
       if (retryCount > 0) {
         const waitTime = Math.min(2000 * Math.pow(2, retryCount - 1), 5000);
@@ -731,11 +750,11 @@ Return ONLY the JSON object.`;
       
       console.log("[Shoe Identification] Analyzing shoe with AI...");
       
-      const prompt = `You are an ELITE sneaker authentication expert. Analyze this sneaker image with EXTREME PRECISION.
+      const prompt = `You are an ELITE sneaker authentication expert. Analyze ${imageUris.length > 1 ? 'these ' + imageUris.length + ' sneaker images' : 'this sneaker image'} with EXTREME PRECISION.
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
-YOU MUST PROVIDE:
+${imageUris.length > 1 ? 'IMPORTANT: You have MULTIPLE images of the same shoe from different angles. Use ALL images together to get the most accurate identification. Look at all angles, surfaces, and details across all images.\n\n' : ''}YOU MUST PROVIDE:
 1. Your PRIMARY identification (most likely match)
 2. 3-5 ALTERNATIVE possible matches ranked by likelihood
 
@@ -824,14 +843,19 @@ Return ONLY valid JSON:
 
       let aiResponse;
       try {
+        const contentArray: ({ type: "text"; text: string } | { type: "image"; image: string })[] = [
+          { type: "text", text: prompt }
+        ];
+        
+        for (const base64Image of base64Images) {
+          contentArray.push({ type: "image", image: base64Image });
+        }
+        
         aiResponse = await generateText({
           messages: [
             {
               role: "user",
-              content: [
-                { type: "text", text: prompt },
-                { type: "image", image: base64Image }
-              ]
+              content: contentArray
             }
           ]
         });
@@ -1009,7 +1033,7 @@ Return ONLY valid JSON:
 
       setLastIdentificationData({
         type: 'photo',
-        input: base64Image.substring(0, 100),
+        input: imageUris.length + " image(s)",
         output: data
       });
       
@@ -1081,16 +1105,8 @@ Return ONLY valid JSON:
       return;
     }
 
-    if (!imageUri) {
-      Alert.alert("Required Field", "Please add an image");
-      return;
-    }
-
-    if (imageError) {
-      Alert.alert(
-        "Image Error", 
-        "The current image failed to load. Please choose a different image or take a new photo."
-      );
+    if (imageUris.length === 0) {
+      Alert.alert("Required Field", "Please add at least one image");
       return;
     }
 
@@ -1104,7 +1120,7 @@ Return ONLY valid JSON:
       silhouette: silhouette.trim() || undefined,
       style: style.trim() || undefined,
       commonName: commonName.trim() || undefined,
-      imageUrl: imageUri,
+      imageUrl: imageUris[0],
       colors: allColors.length > 0 ? allColors : (colors.length > 0 ? colors : []),
       mainColors: mainColors.length > 0 ? mainColors : undefined,
       accentColors: accentColors.length > 0 ? accentColors : undefined,
@@ -1198,48 +1214,62 @@ Return ONLY valid JSON:
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Photo</Text>
-          {imageUri ? (
-            <View style={styles.imagePreview}>
-              <Image 
-                source={{ uri: imageUri }} 
-                style={styles.image} 
-                contentFit="cover"
-                placeholder={require("../../assets/images/icon.png")}
-                placeholderContentFit="contain"
-                transition={300}
-                cachePolicy="memory-disk"
-                onError={(error) => {
-                  console.error("[Image Error] Failed to load:", imageUri, error);
-                  setImageError(true);
-                }}
-                onLoad={() => {
-                  console.log("[Image Success] Loaded:", imageUri);
-                  setImageError(false);
-                }}
-              />
-              {imageError && (
-                <View style={styles.imageErrorOverlay}>
-                  <AlertCircle size={32} color="#FF6B6B" />
-                  <Text style={styles.imageErrorText}>Image failed to load</Text>
-                  <Text style={styles.imageErrorSubtext}>Try choosing a different photo</Text>
+          <Text style={styles.sectionTitle}>Photos {imageUris.length > 0 && `(${imageUris.length}/5)`}</Text>
+          {imageUris.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesScrollView} contentContainerStyle={styles.imagesScrollContent}>
+              {imageUris.map((uri, index) => (
+                <View key={index} style={styles.imagePreviewCard}>
+                  <Image 
+                    source={{ uri }} 
+                    style={styles.multiImage} 
+                    contentFit="cover"
+                    placeholder={require("../../assets/images/icon.png")}
+                    placeholderContentFit="contain"
+                    transition={300}
+                    cachePolicy="memory-disk"
+                    onError={(error) => {
+                      console.error("[Image Error] Failed to load:", uri, error);
+                      setImageErrors(prev => ({ ...prev, [uri]: true }));
+                    }}
+                    onLoad={() => {
+                      console.log("[Image Success] Loaded:", uri);
+                      setImageErrors(prev => ({ ...prev, [uri]: false }));
+                    }}
+                  />
+                  {imageErrors[uri] && (
+                    <View style={styles.imageErrorOverlay}>
+                      <AlertCircle size={24} color="#FF6B6B" />
+                      <Text style={styles.imageErrorSmallText}>Failed</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity 
+                    style={styles.removeImageBadge}
+                    onPress={() => {
+                      setImageUris(prev => prev.filter((_, i) => i !== index));
+                      setImageErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors[uri];
+                        return newErrors;
+                      });
+                    }}
+                  >
+                    <Text style={styles.removeImageBadgeText}>✕</Text>
+                  </TouchableOpacity>
+                  {index === 0 && (
+                    <View style={styles.primaryImageBadge}>
+                      <Text style={styles.primaryImageText}>PRIMARY</Text>
+                    </View>
+                  )}
                 </View>
+              ))}
+              {imageUris.length < 5 && (
+                <TouchableOpacity style={styles.addMoreImageCard} onPress={pickImage}>
+                  <ImageIcon size={32} color={COLORS.primary} />
+                  <Text style={styles.addMoreImageText}>Add More</Text>
+                  <Text style={styles.addMoreImageSubtext}>({imageUris.length}/5)</Text>
+                </TouchableOpacity>
               )}
-              <View style={styles.imageOverlayButtons}>
-                <TouchableOpacity style={styles.changeImageButton} onPress={pickImage}>
-                  <Text style={styles.changeImageText}>Change</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.changeImageButton, styles.removeImageButton]} 
-                  onPress={() => {
-                    setImageUri("");
-                    setImageError(false);
-                  }}
-                >
-                  <Text style={styles.changeImageText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+            </ScrollView>
           ) : (
             <View style={styles.imagePlaceholder}>
               <View style={styles.imageButtonsRow}>
@@ -1254,14 +1284,23 @@ Return ONLY valid JSON:
               </View>
             </View>
           )}
-          {category === "sneaker" && imageUri && !imageError && (
+          {category === "sneaker" && imageUris.length > 0 && (
             <>
               <View style={styles.photoTipsCard}>
-                <Text style={styles.photoTipsTitle}>📸 For Best Results:</Text>
-                <Text style={styles.photoTipsText}>• Side profile view showing swoosh/logo</Text>
-                <Text style={styles.photoTipsText}>• Clear, well-lit photo</Text>
-                <Text style={styles.photoTipsText}>• Show heel area if possible</Text>
-                <Text style={styles.photoTipsText}>• Include tongue tag or size label</Text>
+                <Text style={styles.photoTipsTitle}>📸 {imageUris.length > 1 ? 'Multiple Images = Better Accuracy!' : 'For Best Results:'}</Text>
+                {imageUris.length > 1 ? (
+                  <>
+                    <Text style={styles.photoTipsText}>• You uploaded {imageUris.length} images - great!</Text>
+                    <Text style={styles.photoTipsText}>• AI will analyze all angles for accuracy</Text>
+                    <Text style={styles.photoTipsText}>• More angles = better identification</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.photoTipsText}>• Add multiple angles for best results</Text>
+                    <Text style={styles.photoTipsText}>• Side, top, heel, and sole views help</Text>
+                    <Text style={styles.photoTipsText}>• Show logos, tags, and color details</Text>
+                  </>
+                )}
               </View>
               <TouchableOpacity 
                 style={styles.identifyButton} 
@@ -1276,7 +1315,7 @@ Return ONLY valid JSON:
                 ) : (
                   <>
                     <Sparkles size={20} color="#FFF" />
-                    <Text style={styles.identifyButtonText}>✨ Identify Shoe from Photo</Text>
+                    <Text style={styles.identifyButtonText}>✨ Identify Shoe from {imageUris.length} Photo{imageUris.length > 1 ? 's' : ''}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -1286,6 +1325,39 @@ Return ONLY valid JSON:
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Details</Text>
+          
+          {category === "sneaker" && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Exact Model / SKU Search</Text>
+              <View style={styles.inputWithButton}>
+                <TextInput
+                  style={styles.inputFlex}
+                  value={modelSearch}
+                  onChangeText={setModelSearch}
+                  placeholder="e.g., 555088-134 or Air Jordan 1 Chicago"
+                  placeholderTextColor={COLORS.textSecondary}
+                />
+                {modelSearch.trim() && (
+                  <TouchableOpacity 
+                    style={styles.aiButton} 
+                    onPress={() => {
+                      setName(modelSearch);
+                      handleSneakerSearch();
+                    }}
+                    disabled={isSearching}
+                  >
+                    {isSearching ? (
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                    ) : (
+                      <Sparkles size={20} color={COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.helperText}>💡 Enter exact SKU or full model name for precise search. This helps find the exact colorway!</Text>
+            </View>
+          )}
+          
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Name *</Text>
             <View style={styles.inputWithButton}>
@@ -1885,11 +1957,11 @@ Return ONLY valid JSON:
                     key={index}
                     style={[
                       styles.imageSelectorOption,
-                      imageUri === url && styles.imageSelectorOptionSelected
+                      imageUris[0] === url && styles.imageSelectorOptionSelected
                     ]}
                     onPress={() => {
-                      setImageUri(url);
-                      setImageError(false);
+                      setImageUris([url, ...imageUris.slice(1)]);
+                      setImageErrors({});
                       setShowImageSelector(false);
                     }}
                   >
@@ -1900,7 +1972,7 @@ Return ONLY valid JSON:
                       placeholder={require("../../assets/images/icon.png")}
                       placeholderContentFit="contain"
                     />
-                    {imageUri === url && (
+                    {imageUris[0] === url && (
                       <View style={styles.imageSelectorCheckmark}>
                         <Text style={styles.imageSelectorCheckmarkText}>✓</Text>
                       </View>
@@ -2798,5 +2870,83 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: COLORS.primary,
     marginLeft: 12,
+  },
+  imagesScrollView: {
+    marginHorizontal: 20,
+  },
+  imagesScrollContent: {
+    gap: 12,
+    paddingRight: 20,
+  },
+  imagePreviewCard: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    overflow: "hidden",
+    position: "relative",
+    backgroundColor: COLORS.surface,
+  },
+  multiImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imageErrorSmallText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "600" as const,
+    marginTop: 4,
+  },
+  removeImageBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(220, 38, 38, 0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  removeImageBadgeText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "700" as const,
+    lineHeight: 18,
+  },
+  primaryImageBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+  },
+  primaryImageText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "700" as const,
+    letterSpacing: 0.5,
+  },
+  addMoreImageCard: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    borderStyle: "dashed" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  addMoreImageText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: COLORS.primary,
+  },
+  addMoreImageSubtext: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
   },
 });
