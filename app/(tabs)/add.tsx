@@ -558,9 +558,10 @@ Return ONLY the JSON object.`;
     );
   };
 
-  const handleSneakerSearch = async () => {
-    if (!name.trim()) {
-      Alert.alert("Enter Sneaker Name", "Please enter a sneaker name to search");
+  const handleSneakerSearch = async (searchQuery?: string) => {
+    const query = searchQuery || name;
+    if (!query.trim()) {
+      Alert.alert("Enter Sneaker Name", "Please enter a sneaker name or model number to search");
       return;
     }
 
@@ -569,7 +570,7 @@ Return ONLY the JSON object.`;
 
     setIsSearching(true);
     try {
-      const result = await sneakerSearchMutation.mutateAsync(name);
+      const result = await sneakerSearchMutation.mutateAsync(query);
       console.log("[Sneaker Search] Final result:", result);
       
       if (result.brand) setBrand(result.brand);
@@ -632,7 +633,7 @@ Return ONLY the JSON object.`;
 
       setLastIdentificationData({
         type: 'name',
-        input: name,
+        input: query,
         output: result
       });
       
@@ -1340,10 +1341,7 @@ Return ONLY valid JSON:
                 {modelSearch.trim() && (
                   <TouchableOpacity 
                     style={styles.aiButton} 
-                    onPress={() => {
-                      setName(modelSearch);
-                      handleSneakerSearch();
-                    }}
+                    onPress={() => handleSneakerSearch(modelSearch)}
                     disabled={isSearching}
                   >
                     {isSearching ? (
@@ -1371,7 +1369,7 @@ Return ONLY valid JSON:
               {category === "sneaker" && name.trim() && (
                 <TouchableOpacity 
                   style={styles.aiButton} 
-                  onPress={handleSneakerSearch}
+                  onPress={() => handleSneakerSearch()}
                   disabled={isSearching}
                 >
                   {isSearching ? (
