@@ -346,7 +346,8 @@ Return ONLY the shoe name, nothing else. No explanation.`;
 
   const sneakerSearchMutation = useMutation({
     mutationFn: async (sneakerName: string) => {
-      console.log("[Sneaker Search] Starting search for:", sneakerName);
+      console.log("[Sneaker Search] Starting REAL DATA search for:", sneakerName);
+      console.log("[Sneaker Search] NEW FLOW: Google first → Extract from REAL listings");
       
       const feedbackContext = getImprovementContext("item_identification");
       console.log("[Sneaker Search] Using feedback context:", feedbackContext);
@@ -354,56 +355,63 @@ Return ONLY the shoe name, nothing else. No explanation.`;
       const isLikelyStyleCode = /^[A-Z0-9]{2,}[-_]?[A-Z0-9]{2,}[-_]?[A-Z0-9]{0,}$/i.test(sneakerName.trim());
       console.log("[Sneaker Search] Input appears to be a style code:", isLikelyStyleCode);
       
-      const searchPrompt = `You are an elite sneaker identification expert with comprehensive knowledge of GOAT, StockX, Poison, SneakerFreaker, and NYKL databases.
+      let googleTitles: string[] = [];
+      
+      try {
+        console.log("[Sneaker Search] STEP 1: Fetching REAL product listings from Google...");
+        const imageData = await searchRealImageMutation.mutateAsync({
+          searchQuery: sneakerName,
+          styleCode: isLikelyStyleCode ? sneakerName : undefined
+        });
+        googleTitles = imageData.titles || [];
+        console.log("[Sneaker Search] Got", googleTitles.length, "REAL product titles from Google");
+        console.log("[Sneaker Search] Sample titles:", googleTitles.slice(0, 3));
+      } catch (error) {
+        console.error("[Sneaker Search] Failed to fetch Google data:", error);
+      }
+      
+      const searchPrompt = `You are a sneaker data extraction expert. Your job is to extract the CORRECT shoe information from REAL product listings.
 
-${feedbackContext ? feedbackContext + "\n" : ""}SEARCH QUERY: "${sneakerName}"
-${isLikelyStyleCode ? "\n🚨🚨🚨 CRITICAL SKU MODE 🚨🚨🚨\n\nThis IS A STYLE CODE/SKU (Product SKU). Style codes are EXACT, UNIQUE identifiers that map to ONE specific shoe.\n\nYOU MUST:\n1. Find the EXACT shoe that has this PRECISE SKU\n2. Return the EXACT OFFICIAL MODEL NAME that matches this SKU on GOAT.com and StockX.com\n3. The 'model' field MUST contain the complete, accurate, official product name for this EXACT SKU\n4. DO NOT return a similar shoe or approximate - SKUs are EXACT matches\n5. The SKU you return MUST match the input SKU exactly\n\nExample: If user inputs '555088-134', you MUST return 'Air Jordan 1 Retro High OG University Blue' because that is the EXACT shoe for SKU 555088-134. DO NOT return 'Air Jordan 1 Chicago' or any other model.\n" : ""}
+${feedbackContext ? feedbackContext + "\n" : ""}USER SEARCH: "${sneakerName}"
+${isLikelyStyleCode ? "\n🎯 SKU/STYLE CODE MODE\nThe user entered a style code. Find the EXACT shoe for this SKU in the listings below.\n" : ""}${googleTitles.length > 0 ? `\n🔍 REAL PRODUCT LISTINGS FROM GOOGLE:\nHere are ACTUAL product page titles from StockX, GOAT, and other sneaker sites:\n\n${googleTitles.slice(0, 15).map((title, i) => `${i + 1}. ${title}`).join('\n')}\n\n⚠️ CRITICAL: The shoe name you return MUST come from these ACTUAL listings above. DO NOT make up or guess a name.\n` : "\n⚠️ WARNING: No Google data available. You must make your best guess.\n"}
 
 YOUR MISSION:
-1. Find the EXACT shoe model with 100% accuracy - THE MODEL NAME MUST BE CORRECT FOR THE ${isLikelyStyleCode ? 'INPUT SKU' : 'SEARCH QUERY'}
-2. ${isLikelyStyleCode ? "CRITICAL: Since this is a SKU search, your PRIMARY match MUST be the exact shoe for this SKU. The 'model' field is what shows to the user as the shoe name - IT MUST BE THE CORRECT NAME FOR THIS SKU. Provide 2-3 alternatives ONLY if you're uncertain about the SKU match." : "ALSO provide 3-5 ALTERNATIVE possible matches in case the primary match is wrong"}
-3. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com - especially for the 'model' field which is displayed as the shoe name
-4. Match the official SKU/Style Code whenever possible (THIS IS CRITICAL FOR IMAGE SEARCH)
-5. Include all relevant colorway details with official names
-6. Provide accurate market pricing data
-7. Create the MOST SPECIFIC search query possible for finding the exact shoe image
+1. ${googleTitles.length > 0 ? "EXTRACT the shoe name from the REAL listings above - look for patterns, find the most common full name" : "Make your best identification"}
+2. The 'model' field is what displays to the user - it MUST be the EXACT official name from ${googleTitles.length > 0 ? "these real listings" : "StockX/GOAT"}
+3. ${isLikelyStyleCode ? "This is a SKU - find which shoe in the listings matches this EXACT code" : "Find the shoe that matches the user's search"}
+4. Provide 3-5 ALTERNATIVE matches in case the primary identification is wrong
+5. Extract SKU codes from the listings if visible
+6. ${googleTitles.length > 0 ? "DO NOT make up shoe names - only use names that appear in the listings above" : "Use official product names from sneaker databases"}
 
-CRITICAL: The imageSearchQuery MUST include:
-- Full official brand name (Nike, Air Jordan, Adidas, etc.)
-- Complete model name with all details
-- Official colorway name (not generic colors)
-- SKU/Style Code if identifiable
-- Year if it helps distinguish between releases
+DATA EXTRACTION RULES:
+${googleTitles.length > 0 ? `- The shoe name is ALREADY in the titles above - find it
+- Look for the most complete, detailed product name
+- If multiple listings say the same name, that's the correct name
+- Extract the SKU if it appears in the titles (format: ABC123-456)
+- Extract prices if mentioned in titles` : `- Use official names from GOAT.com and StockX.com
+- Include complete colorway names
+- Match SKUs to exact shoes`}
 
-EXPANDED SEARCH STRATEGY:
-- Check abbreviations against full official names (e.g., "bred 11" = "Air Jordan 11 Retro 'Bred'")
-- Identify regional vs global releases
-- Match nicknames to official colorway names
-- Cross-reference multiple sources for accuracy
-- Include collaboration details if applicable (e.g., Off-White, Travis Scott)
+CRITICAL FOR 'model' FIELD:
+- This is THE shoe name shown to the user
+- ${googleTitles.length > 0 ? "Copy it EXACTLY from the listings above" : "Use the complete official product name"}
+- Include brand, model, and colorway (e.g., "Air Jordan 1 Retro High OG 'University Blue'")
+- ${isLikelyStyleCode ? "For SKU searches, this MUST be the exact shoe for that SKU" : ""}
 
-REFERENCE SOURCES PRIORITY:
-1. GOAT.com - Primary for authentication and official names
-2. StockX.com - Market pricing and SKU verification
-3. Poison.com - International releases and rare colorways
-4. SneakerFreaker.com - Detailed specifications and history
-5. NYKL.com - Additional market data and variants
+EXAMPLES OF EXTRACTION FROM REAL TITLES:
+Title: "Air Jordan 1 High OG University Blue 555088-134 | StockX"
+→ Brand: "Air Jordan", Model: "Air Jordan 1 Retro High OG 'University Blue'", SKU: "555088-134"
 
-KEY DETAILS TO IDENTIFY:
-- Exact colorway (not just primary colors, but official names like "University Blue" not "blue")
-- Style/SKU code (e.g., DV1748-400, 555088-134)
-- Year and month of release
-- Retail vs resale pricing
-- Special editions, PE (Player Exclusive), or collaborations
-- Material details (leather type, suede, mesh, etc.)
-- Notable features (reflective, glow-in-dark, special laces, etc.)
+Title: "Nike Dunk Low Black White (Panda) - DD1391-100 - GOAT"
+→ Brand: "Nike", Model: "Dunk Low 'Black White'", SKU: "DD1391-100", Style: "Panda"
 
-EXAMPLES:
-Input: "bred 11" → Brand: Air Jordan, Model: "Air Jordan 11 Retro 'Bred' 2019", SKU: 378037-061, Image Search: "Air Jordan 11 Bred 378037-061"
-Input: "panda dunk" → Brand: Nike, Model: "Dunk Low 'Black White'", SKU: DD1391-100, Nickname: "Panda", Image Search: "Nike Dunk Low Black White DD1391-100"
-Input: "travis scott jordan 1" → Brand: Air Jordan x Travis Scott, Model: "Air Jordan 1 Retro High OG 'Mocha'", SKU: CD4487-100, Image Search: "Travis Scott Air Jordan 1 Mocha CD4487-100"
-Input: "555088-134" (SKU) → Brand: Air Jordan, Model: "Air Jordan 1 Retro High OG 'University Blue'", SKU: 555088-134, Image Search: "Air Jordan 1 University Blue 555088-134" [EXACT MATCH REQUIRED]
-Input: "DV1748-400" (SKU) → Must find EXACT shoe with this precise SKU - do not approximate or guess
+Title: "Buy Travis Scott x Air Jordan 1 Retro High OG 'Mocha' - CD4487-100"
+→ Brand: "Air Jordan", Model: "Air Jordan 1 Retro High OG 'Mocha'", SKU: "CD4487-100"
+
+${isLikelyStyleCode ? `SKU SEARCH EXAMPLE:
+User entered: "${sneakerName}"
+You see in titles: "...${sneakerName}...Nike Dunk Low Retro White Black Panda..."
+→ The shoe is Nike Dunk Low Retro White Black (Panda) with SKU ${sneakerName}` : ""}
 
 Provide information in this exact JSON format:
 {
