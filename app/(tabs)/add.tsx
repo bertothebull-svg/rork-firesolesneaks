@@ -69,6 +69,19 @@ export default function AddItemScreen() {
   } | null>(null);
   const [imageOptions, setImageOptions] = useState<string[]>([]);
   const [showImageSelector, setShowImageSelector] = useState(false);
+  const [alternativeShoes, setAlternativeShoes] = useState<{
+    brand: string;
+    model: string;
+    colorway: string;
+    silhouette: string;
+    style: string;
+    styleCode: string;
+    retailPrice: string;
+    marketValue: string;
+    confidence: string;
+    searchQuery: string;
+  }[]>([]);
+  const [showAlternatives, setShowAlternatives] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -278,11 +291,12 @@ ${feedbackContext ? feedbackContext + "\n" : ""}SEARCH QUERY: "${sneakerName}"
 
 YOUR MISSION:
 1. Find the EXACT shoe model with 100% accuracy
-2. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com
-3. Match the official SKU/Style Code whenever possible (THIS IS CRITICAL FOR IMAGE SEARCH)
-4. Include all relevant colorway details with official names
-5. Provide accurate market pricing data
-6. Create the MOST SPECIFIC search query possible for finding the exact shoe image
+2. ALSO provide 3-5 ALTERNATIVE possible matches in case the primary match is wrong
+3. Use complete, official product names EXACTLY as they appear on GOAT.com and StockX.com
+4. Match the official SKU/Style Code whenever possible (THIS IS CRITICAL FOR IMAGE SEARCH)
+5. Include all relevant colorway details with official names
+6. Provide accurate market pricing data
+7. Create the MOST SPECIFIC search query possible for finding the exact shoe image
 
 CRITICAL: The imageSearchQuery MUST include:
 - Full official brand name (Nike, Air Jordan, Adidas, etc.)
@@ -335,7 +349,21 @@ Provide information in this exact JSON format:
   "materials": "primary materials used (leather, suede, mesh, etc.)",
   "specialFeatures": "any unique features (reflective, glow, special box, etc.)",
   "confidence": "high (exact match with SKU), medium (strong match), or low (approximate)",
-  "sources": "which platforms were referenced (GOAT, StockX, etc.)"
+  "sources": "which platforms were referenced (GOAT, StockX, etc.)",
+  "alternatives": [
+    {
+      "brand": "brand name",
+      "model": "alternative model name",
+      "colorway": "colorway name",
+      "silhouette": "base silhouette",
+      "style": "nickname",
+      "styleCode": "SKU if known",
+      "retailPrice": "price",
+      "marketValue": "market value",
+      "confidence": "confidence level",
+      "searchQuery": "search query for this alternative"
+    }
+  ]
 }
 
 IMPORTANT: 
@@ -344,6 +372,7 @@ IMPORTANT:
 - Use official marketplace terminology
 - Distinguish between different years/versions of same colorway
 - Provide EXACT search query for finding images
+- Include 3-5 alternative matches that could potentially match the search query
 - Return ONLY valid JSON, no additional text
 
 Return ONLY the JSON object.`;
@@ -455,12 +484,75 @@ Return ONLY the JSON object.`;
     addFeedback(feedbackEntry);
     setShowAccuracyRating(false);
 
-    if (rating < 5) {
+    if (rating < 3 && alternativeShoes.length > 0) {
+      Alert.alert(
+        "Not the right shoe?",
+        "We found some alternative matches. Would you like to see them?",
+        [
+          { text: "No, thanks", style: "cancel" },
+          { 
+            text: "Show Alternatives", 
+            onPress: () => setShowAlternatives(true)
+          }
+        ]
+      );
+    } else if (rating < 5) {
       Alert.alert(
         "Thanks for your feedback!",
         "We'll use this to improve future item identifications."
       );
     }
+  };
+
+  const handleSelectAlternative = async (alt: typeof alternativeShoes[0]) => {
+    console.log("[Alternative Selection] User selected:", alt.model);
+    
+    if (alt.brand) setBrand(alt.brand);
+    if (alt.model) setName(alt.model);
+    if (alt.silhouette) setSilhouette(alt.silhouette);
+    if (alt.style) setStyle(alt.style);
+    if (alt.colorway) {
+      setColors([alt.colorway]);
+      setMainColors([alt.colorway]);
+    }
+    if (alt.styleCode) {
+      const currentNotes = notes ? notes + "\n\n" : "";
+      setNotes(currentNotes + `Style Code: ${alt.styleCode}`);
+    }
+    if (alt.marketValue) setMarketValue(alt.marketValue.toString());
+    if (alt.retailPrice) setPurchasePrice(alt.retailPrice.toString());
+    
+    setShowAlternatives(false);
+    
+    if (alt.searchQuery) {
+      try {
+        console.log("[Alternative Selection] Fetching images for:", alt.searchQuery);
+        const imageUrls = await searchRealImageMutation.mutateAsync({
+          searchQuery: alt.searchQuery,
+          styleCode: alt.styleCode,
+          brand: alt.brand,
+          model: alt.model
+        });
+        
+        if (imageUrls.length > 0) {
+          setImageOptions(imageUrls);
+          setImageUri(imageUrls[0]);
+          setImageError(false);
+          
+          if (imageUrls.length > 1) {
+            setTimeout(() => setShowImageSelector(true), 500);
+          }
+        }
+      } catch (error) {
+        console.error("[Alternative Selection] Image search failed:", error);
+      }
+    }
+    
+    Alert.alert(
+      "Updated!",
+      `Changed to: ${alt.brand} ${alt.model}`,
+      [{ text: "OK" }]
+    );
   };
 
   const handleSneakerSearch = async () => {
@@ -491,6 +583,13 @@ Return ONLY the JSON object.`;
       }
       if (result.marketValue) setMarketValue(result.marketValue);
       if (result.retailPrice) setPurchasePrice(result.retailPrice);
+      
+      if (result.alternatives && Array.isArray(result.alternatives) && result.alternatives.length > 0) {
+        console.log("[Sneaker Search] Found", result.alternatives.length, "alternative matches");
+        setAlternativeShoes(result.alternatives);
+      } else {
+        setAlternativeShoes([]);
+      }
 
       let imageFound = false;
       if (result.imageSearchQuery) {
@@ -636,6 +735,10 @@ Return ONLY the JSON object.`;
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
+YOU MUST PROVIDE:
+1. Your PRIMARY identification (most likely match)
+2. 3-5 ALTERNATIVE possible matches ranked by likelihood
+
 CRITICAL INSTRUCTIONS:
 You MUST examine EVERY surface of the shoe. Do NOT skip any part. Look at colors, materials, and details on:
 
@@ -701,7 +804,22 @@ Return ONLY valid JSON:
   "marketValue": "current market value number only",
   "confidence": "high (if SKU visible or 100% certain) / medium (strong match) / low (uncertain)",
   "confidenceReason": "explain why this confidence level - mention which specific details led to ID",
-  "searchQuery": "Brand + Full Model + Official Colorway + SKU for precise Google search"
+  "searchQuery": "Brand + Full Model + Official Colorway + SKU for precise Google search",
+  "alternatives": [
+    {
+      "brand": "brand name",
+      "model": "alternative model name",
+      "colorway": "colorway name", 
+      "silhouette": "base silhouette",
+      "style": "nickname or style name",
+      "styleCode": "SKU if identifiable",
+      "retailPrice": "retail price",
+      "marketValue": "market value",
+      "confidence": "confidence level for this alternative",
+      "searchQuery": "search query for this specific shoe",
+      "reason": "why this could be a match based on visual elements"
+    }
+  ]
 }`;
 
       let aiResponse;
@@ -882,6 +1000,13 @@ Return ONLY valid JSON:
         return false;
       }
 
+      if (result.alternatives && Array.isArray(result.alternatives) && result.alternatives.length > 0) {
+        console.log("[Shoe Identification] Found", result.alternatives.length, "alternative matches");
+        setAlternativeShoes(result.alternatives);
+      } else {
+        setAlternativeShoes([]);
+      }
+
       setLastIdentificationData({
         type: 'photo',
         input: base64Image.substring(0, 100),
@@ -889,7 +1014,8 @@ Return ONLY valid JSON:
       });
       
       const confidenceEmoji = data.confidence === "high" ? "🎯" : data.confidence === "medium" ? "👍" : "🤔";
-      let message = `${confidenceEmoji} Identified from Photo!\n\n${data.brand || "?"} ${data.model || "?"}\n\nReview the details below and adjust if needed.`;
+      const altCount = result.alternatives?.length || 0;
+      let message = `${confidenceEmoji} Identified from Photo!\n\n${data.brand || "?"} ${data.model || "?"}\n\nReview the details below and adjust if needed.${altCount > 0 ? `\n\n💡 ${altCount} alternative${altCount > 1 ? 's' : ''} available if this isn't right.` : ''}`;
       
       if (data.confidence) {
         message += `\n\nConfidence: ${data.confidence.toUpperCase()}`;
@@ -1681,6 +1807,67 @@ Return ONLY valid JSON:
         isSubmitting={isAddingFeedback}
       />
 
+      {alternativeShoes.length > 0 && (
+        <TouchableOpacity 
+          style={styles.showAlternativesButton}
+          onPress={() => setShowAlternatives(true)}
+        >
+          <Text style={styles.showAlternativesText}>🔄 Not the right shoe? See {alternativeShoes.length} alternative{alternativeShoes.length > 1 ? 's' : ''}</Text>
+        </TouchableOpacity>
+      )}
+
+      {showAlternatives && alternativeShoes.length > 0 && (
+        <View style={styles.alternativesOverlay}>
+          <View style={styles.alternativesModal}>
+            <View style={styles.alternativesHeader}>
+              <Text style={styles.alternativesTitle}>Alternative Matches</Text>
+              <TouchableOpacity onPress={() => setShowAlternatives(false)} style={styles.alternativesClose}>
+                <Text style={styles.alternativesCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.alternativesSubtitle}>Select the correct shoe from these options</Text>
+            <ScrollView style={styles.alternativesScroll}>
+              {alternativeShoes.map((alt, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.alternativeItem}
+                  onPress={() => handleSelectAlternative(alt)}
+                >
+                  <View style={styles.alternativeInfo}>
+                    <Text style={styles.alternativeBrand}>{alt.brand}</Text>
+                    <Text style={styles.alternativeModel}>{alt.model}</Text>
+                    {alt.colorway && (
+                      <Text style={styles.alternativeColorway}>{alt.colorway}</Text>
+                    )}
+                    {alt.styleCode && (
+                      <Text style={styles.alternativeSku}>SKU: {alt.styleCode}</Text>
+                    )}
+                    <View style={styles.alternativeDetails}>
+                      {alt.marketValue && (
+                        <Text style={styles.alternativePrice}>${alt.marketValue}</Text>
+                      )}
+                      {alt.confidence && (
+                        <View style={[
+                          styles.alternativeConfidence,
+                          alt.confidence === 'high' && styles.confidenceHigh,
+                          alt.confidence === 'medium' && styles.confidenceMedium,
+                          alt.confidence === 'low' && styles.confidenceLow,
+                        ]}>
+                          <Text style={styles.alternativeConfidenceText}>
+                            {alt.confidence.toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  <Text style={styles.alternativeArrow}>→</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
       {showImageSelector && imageOptions.length > 1 && (
         <View style={styles.imageSelectorOverlay}>
           <View style={styles.imageSelectorModal}>
@@ -2467,5 +2654,149 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 16,
     fontWeight: "700" as const,
+  },
+  showAlternativesButton: {
+    position: "absolute",
+    bottom: 100,
+    left: 20,
+    right: 20,
+    backgroundColor: COLORS.surface,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    alignItems: "center",
+  },
+  showAlternativesText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: "600" as const,
+  },
+  alternativesOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  alternativesModal: {
+    backgroundColor: COLORS.background,
+    borderRadius: 20,
+    width: "100%",
+    maxHeight: "85%",
+    overflow: "hidden",
+  },
+  alternativesHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  alternativesTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  alternativesSubtitle: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  alternativesClose: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alternativesCloseText: {
+    fontSize: 24,
+    color: COLORS.textSecondary,
+    fontWeight: "400" as const,
+  },
+  alternativesScroll: {
+    maxHeight: 450,
+  },
+  alternativeItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  alternativeInfo: {
+    flex: 1,
+  },
+  alternativeBrand: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: COLORS.primary,
+    textTransform: "uppercase" as const,
+    letterSpacing: 0.5,
+  },
+  alternativeModel: {
+    fontSize: 16,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+    marginTop: 4,
+  },
+  alternativeColorway: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  alternativeSku: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+    fontFamily: "monospace",
+  },
+  alternativeDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    gap: 10,
+  },
+  alternativePrice: {
+    fontSize: 15,
+    fontWeight: "700" as const,
+    color: COLORS.success || "#22C55E",
+  },
+  alternativeConfidence: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: COLORS.surface,
+  },
+  confidenceHigh: {
+    backgroundColor: "rgba(34, 197, 94, 0.2)",
+  },
+  confidenceMedium: {
+    backgroundColor: "rgba(234, 179, 8, 0.2)",
+  },
+  confidenceLow: {
+    backgroundColor: "rgba(239, 68, 68, 0.2)",
+  },
+  alternativeConfidenceText: {
+    fontSize: 10,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  alternativeArrow: {
+    fontSize: 20,
+    color: COLORS.primary,
+    marginLeft: 12,
   },
 });
