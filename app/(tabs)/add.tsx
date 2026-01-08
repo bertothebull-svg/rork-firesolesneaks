@@ -632,51 +632,76 @@ Return ONLY the JSON object.`;
       
       console.log("[Shoe Identification] Analyzing shoe with AI...");
       
-      const prompt = `Analyze this sneaker image and identify the EXACT shoe with correct colorway.
+      const prompt = `You are an ELITE sneaker authentication expert. Analyze this sneaker image with EXTREME PRECISION.
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
-STEP 1 - COLOR EXTRACTION (DO THIS FIRST):
-Describe the ACTUAL COLORS you see on each part:
-- Toe box: [exact color/shade]
-- Side panels: [exact color/shade]
-- Heel: [exact color/shade]
-- Swoosh/logos: [exact color]
-- Midsole: [exact color - white/cream/colored]
-- Outsole: [exact color if visible]
-- Laces: [exact color]
-- Collar: [exact color]
+CRITICAL INSTRUCTIONS:
+You MUST examine EVERY surface of the shoe. Do NOT skip any part. Look at colors, materials, and details on:
 
-STEP 2 - IDENTIFY SHOE:
-- Brand: Nike, Adidas, Jordan, New Balance, etc.
-- Silhouette: Air Jordan 1 High/Mid/Low, Dunk High/Low, etc.
-- Colorway: Match the EXACT colors from Step 1 to official colorway name
-  * Examples: "Chicago" = white/black/red, "Bred" = black/red, "University Blue" = light blue/white/black
-  * Use official names from StockX/GOAT, not generic descriptions
+1. UPPER SURFACES:
+   - Toe box (exact color, material texture)
+   - Side panels - BOTH lateral AND medial (describe each separately)
+   - Heel counter (color, any branding)
+   - Ankle collar (color, padding color)
+   - Tongue (color, any logos or text)
+   - Quarter panels (color)
+   - Any overlays or underlays (colors, layers)
 
-STEP 3 - VERIFICATION:
-- SKU/Style Code if visible on tag
-- Materials: leather, suede, etc.
-- Special features: collaborations, unique details
+2. SWOOSH/LOGOS/BRANDING:
+   - Swoosh color (if Nike/Jordan)
+   - Swoosh placement (lateral, medial, both)
+   - Other logos (Jumpman, adidas stripes, NB logo)
+   - Logo colors and materials
 
-CRITICAL: The colorway MUST match the actual colors you see in Step 1. Don't guess based on silhouette alone.
+3. MIDSOLE (THIS IS CRITICAL - DON'T IGNORE):
+   - Primary midsole color
+   - Any accent colors on midsole
+   - Midsole material (painted, exposed foam, aged/yellowed)
+   - Any Air units, Boost, or tech features visible
+
+4. OUTSOLE (LOOK AT THE BOTTOM):
+   - Outsole color (rubber color)
+   - Tread pattern color
+   - Any gum sole, translucent sole
+
+5. LACES & HARDWARE:
+   - Lace color
+   - Lace tips/aglets
+   - Eyelets (metal/plastic, color)
+
+6. STITCHING & DETAILS:
+   - Stitch colors
+   - Any contrasting stitching
+   - Special details (reflective, glow, special textures)
+
+Now IDENTIFY THE SHOE:
+- Cross-reference ALL colors you found with known colorways
+- Match the EXACT color combination to official releases
+- Use the SKU/style code if visible anywhere (tongue tag, size tag, insole)
+- Consider YEAR of release if there are multiple versions
+
+EXAMPLES OF PROPER COLOR ANALYSIS:
+- "Chicago" = White leather toe/quarter + Black leather mid panels + Varsity Red overlays + White midsole + Red outsole
+- "University Blue" = White leather base + University Blue overlays + Black Nike swoosh + White midsole + Light blue outsole
+- "Panda Dunk" = White leather toe/quarter/collar + Black leather overlays + Black swoosh + White midsole + Black outsole
 
 Return ONLY valid JSON:
 {
-  "brand": "official brand name",
-  "model": "full model name",
-  "silhouette": "base silhouette",
-  "colorway": "OFFICIAL colorway name matching Step 1 colors",
-  "extractedColors": "colors seen in Step 1",
-  "styleCode": "SKU if visible",
-  "colors": ["list of all colors with specific shades"],
-  "mainColors": ["2-3 dominant colors"],
-  "accentColors": ["accent colors"],
-  "retailPrice": "number only",
-  "marketValue": "number only",
-  "confidence": "high/medium/low",
-  "confidenceReason": "why this confidence level based on color matching",
-  "searchQuery": "Brand Model Colorway SKU for image search"
+  "brand": "official brand (Nike, Air Jordan, Adidas, New Balance, etc.)",
+  "model": "complete official model name",
+  "silhouette": "base silhouette (Air Jordan 1 High, Dunk Low, etc.)",
+  "colorway": "EXACT official colorway name from GOAT/StockX",
+  "extractedColors": "detailed description: toe box [color], panels [color], swoosh [color], midsole [color], outsole [color], etc.",
+  "styleCode": "official SKU/Style Code if visible",
+  "colors": ["all distinct colors seen on shoe with specific names"],
+  "mainColors": ["2-3 most dominant colors"],
+  "accentColors": ["secondary/accent colors"],
+  "retailPrice": "original retail price number only",
+  "marketValue": "current market value number only",
+  "confidence": "high (if SKU visible or 100% certain) / medium (strong match) / low (uncertain)",
+  "confidenceReason": "explain why this confidence level - mention which specific details led to ID",
+  "searchQuery": "Brand + Full Model + Official Colorway + SKU for precise Google search"
 }`;
 
       let aiResponse;
