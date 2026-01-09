@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Shirt, Package, Sparkles, Trash2, Edit, Plus, Trash, Filter, X, Grid3X3, List, Calendar } from "lucide-react-native";
+import { Shirt, Package, Sparkles, Trash2, Edit, Plus, Trash, Filter, X, Grid3X3, List, Calendar, ChevronDown, ChevronRight } from "lucide-react-native";
 import { useState, useMemo } from "react";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +23,7 @@ export default function WardrobeScreen() {
   const [selectedSeasons, setSelectedSeasons] = useState<Season[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<OutfitStyle[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
 
   const filteredItems = useMemo(() => {
     let result = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
@@ -121,6 +122,27 @@ export default function WardrobeScreen() {
     setSelectedStyles(prev => 
       prev.includes(style) ? prev.filter(s => s !== style) : [...prev, style]
     );
+  };
+
+  const toggleBrandExpanded = (brand: string) => {
+    setExpandedBrands(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(brand)) {
+        newSet.delete(brand);
+      } else {
+        newSet.add(brand);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAllBrands = () => {
+    const allBrands = groupedByBrand.map(g => g.brand);
+    setExpandedBrands(new Set(allBrands));
+  };
+
+  const collapseAllBrands = () => {
+    setExpandedBrands(new Set());
   };
 
   const groupedByBrand = useMemo(() => {
@@ -425,10 +447,40 @@ export default function WardrobeScreen() {
         ) : (
           <View style={styles.sectionsContainer}>
             {viewMode === "grid" ? (
-              groupedByBrand.map((group) => (
-                <View key={group.brand} style={styles.brandSection}>
-                  <Text style={styles.brandHeader}>{group.brand}</Text>
-                  <View style={styles.grid}>
+              <>
+                {groupedByBrand.length > 1 && (
+                  <View style={styles.expandCollapseRow}>
+                    <TouchableOpacity onPress={expandAllBrands} style={styles.expandCollapseButton}>
+                      <Text style={styles.expandCollapseText}>Expand All</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={collapseAllBrands} style={styles.expandCollapseButton}>
+                      <Text style={styles.expandCollapseText}>Collapse All</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {groupedByBrand.map((group) => {
+                  const isExpanded = expandedBrands.has(group.brand);
+                  return (
+                    <View key={group.brand} style={styles.brandSection}>
+                      <TouchableOpacity 
+                        style={styles.brandHeaderRow}
+                        onPress={() => toggleBrandExpanded(group.brand)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.brandHeaderLeft}>
+                          {isExpanded ? (
+                            <ChevronDown size={20} color={COLORS.text} />
+                          ) : (
+                            <ChevronRight size={20} color={COLORS.text} />
+                          )}
+                          <Text style={styles.brandHeader}>{group.brand}</Text>
+                        </View>
+                        <View style={styles.brandItemCount}>
+                          <Text style={styles.brandItemCountText}>{group.items.length}</Text>
+                        </View>
+                      </TouchableOpacity>
+                      {isExpanded && (
+                        <View style={styles.grid}>
                     {group.items.map((item) => (
                       <TouchableOpacity 
                         key={item.id} 
@@ -515,9 +567,12 @@ export default function WardrobeScreen() {
                         </View>
                       </TouchableOpacity>
                     ))}
-                  </View>
-                </View>
-              ))
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
+              </>
             ) : (
               <View style={styles.listContainer}>
                 {filteredItems.map((item) => (
@@ -828,19 +883,65 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   brandSection: {
-    marginBottom: 24,
+    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    overflow: "hidden" as const,
+  },
+  brandHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: COLORS.surface,
+  },
+  brandHeaderLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+    flex: 1,
   },
   brandHeader: {
     fontSize: 16,
     fontWeight: "600" as const,
     color: COLORS.text,
-    marginBottom: 10,
     letterSpacing: -0.2,
   },
+  brandItemCount: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    minWidth: 28,
+    alignItems: "center" as const,
+  },
+  brandItemCountText: {
+    fontSize: 12,
+    fontWeight: "700" as const,
+    color: "#FFF",
+  },
+  expandCollapseRow: {
+    flexDirection: "row" as const,
+    justifyContent: "flex-end" as const,
+    gap: 12,
+    marginBottom: 12,
+  },
+  expandCollapseButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  expandCollapseText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: COLORS.primary,
+  },
   grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
     gap: 8,
+    padding: 12,
+    paddingTop: 0,
   },
   card: {
     width: CARD_WIDTH,
