@@ -168,10 +168,54 @@ export default function WardrobeScreen() {
   };
 
   const groupedByBrand = useMemo(() => {
+    const normalizesilhouette = (silhouette: string): string => {
+      if (!silhouette) return 'Other Silhouettes';
+      
+      const knownModels = [
+        'Air Max 1', 'Air Max 90', 'Air Max 95', 'Air Max 97', 'Air Max Plus', 'Air Max 270', 'Air Max 720',
+        'Air Force 1', 'Air Force One',
+        'Air Jordan 1', 'Air Jordan 2', 'Air Jordan 3', 'Air Jordan 4', 'Air Jordan 5', 'Air Jordan 6',
+        'Air Jordan 7', 'Air Jordan 8', 'Air Jordan 9', 'Air Jordan 10', 'Air Jordan 11', 'Air Jordan 12',
+        'Air Jordan 13', 'Air Jordan 14', 'Jordan 1', 'Jordan 2', 'Jordan 3', 'Jordan 4', 'Jordan 5',
+        'Jordan 6', 'Jordan 7', 'Jordan 8', 'Jordan 9', 'Jordan 10', 'Jordan 11', 'Jordan 12', 'Jordan 13',
+        'Dunk Low', 'Dunk High', 'Dunk SB',
+        'New Balance 550', 'New Balance 990', 'New Balance 992', 'New Balance 993', 'New Balance 2002R',
+        'Yeezy 350', 'Yeezy 500', 'Yeezy 700', 'Yeezy 380', 'Yeezy Slide', 'Yeezy Foam Runner',
+        'Ultraboost', 'Stan Smith', 'Superstar', 'Forum', 'Gazelle', 'Samba',
+        'Chuck Taylor', 'One Star',
+        'Old Skool', 'Sk8-Hi', 'Era', 'Authentic',
+        'Gel-Lyte III', 'Gel-Lyte V',
+        'Classic Leather', 'Club C',
+      ];
+      
+      const normalized = silhouette.trim();
+      const lowerNormalized = normalized.toLowerCase();
+      
+      for (const model of knownModels) {
+        if (lowerNormalized.startsWith(model.toLowerCase())) {
+          return model;
+        }
+      }
+      
+      const words = normalized.split(/\s+/);
+      if (words.length >= 2) {
+        const firstTwo = words.slice(0, 2).join(' ');
+        const hasNumber = /\d/.test(firstTwo);
+        if (hasNumber) {
+          return firstTwo;
+        }
+        if (words.length >= 3 && /\d/.test(words[2])) {
+          return words.slice(0, 3).join(' ');
+        }
+        return firstTwo;
+      }
+      
+      return normalized;
+    };
+
     const getSubcategoryForItem = (item: typeof filteredItems[0]): string => {
       if (item.category === 'sneaker') {
-        // Group sneakers by silhouette (Air Max 1, Air Force One, etc.)
-        return item.silhouette || 'Other Silhouettes';
+        return normalizesilhouette(item.silhouette || '');
       } else if (item.category === 'top') {
         if (item.subtype) {
           const subtypeLabels: { [key: string]: string } = {
