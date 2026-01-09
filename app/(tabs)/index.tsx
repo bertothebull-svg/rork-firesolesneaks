@@ -170,8 +170,9 @@ export default function WardrobeScreen() {
   const groupedByBrand = useMemo(() => {
     const getSubcategoryForItem = (item: typeof filteredItems[0]): string => {
       if (item.category === 'sneaker') {
-        return item.silhouette || 'Other';
-      } else if (item.category === 'top' || item.category === 'bottom') {
+        // Group sneakers by silhouette (Air Max 1, Air Force One, etc.)
+        return item.silhouette || 'Other Silhouettes';
+      } else if (item.category === 'top') {
         if (item.subtype) {
           const subtypeLabels: { [key: string]: string } = {
             tshirt: 'Short Sleeve',
@@ -179,6 +180,13 @@ export default function WardrobeScreen() {
             buttondown: 'Button Down',
             sweatshirt: 'Long Sleeve',
             outerwear: 'Outerwear',
+          };
+          return subtypeLabels[item.subtype] || item.subtype;
+        }
+        return 'Other Tops';
+      } else if (item.category === 'bottom') {
+        if (item.subtype) {
+          const subtypeLabels: { [key: string]: string } = {
             jeans: 'Jeans',
             dressslacks: 'Dress Slacks',
             sweatpants: 'Sweatpants',
@@ -187,9 +195,10 @@ export default function WardrobeScreen() {
           };
           return subtypeLabels[item.subtype] || item.subtype;
         }
-        return 'Other';
+        return 'Other Bottoms';
       } else if (item.category === 'hat') {
-        return item.team || item.brand || 'Other';
+        // Group hats by team
+        return item.team || 'Other Teams';
       }
       return 'Other';
     };
@@ -211,16 +220,23 @@ export default function WardrobeScreen() {
     });
     
     const subtypeOrder: { [key: string]: number } = {
+      // Tops order
       'Short Sleeve': 1,
       'Polo': 2,
       'Button Down': 3,
       'Long Sleeve': 4,
       'Outerwear': 5,
-      'Jeans': 6,
-      'Dress Slacks': 7,
-      'Sweatpants': 8,
-      'Shorts': 9,
-      'Gym Shorts': 10,
+      // Bottoms order
+      'Jeans': 10,
+      'Dress Slacks': 11,
+      'Sweatpants': 12,
+      'Shorts': 13,
+      'Gym Shorts': 14,
+      // Fallbacks
+      'Other Tops': 90,
+      'Other Bottoms': 91,
+      'Other Silhouettes': 92,
+      'Other Teams': 93,
       'Other': 999,
     };
     
