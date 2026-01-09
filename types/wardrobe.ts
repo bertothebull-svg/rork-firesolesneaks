@@ -32,6 +32,7 @@ export interface WardrobeItem {
   isPartOfSet?: boolean;
   setId?: string;
   fit?: string;
+  team?: string;
 }
 
 export interface SavedOutfit {

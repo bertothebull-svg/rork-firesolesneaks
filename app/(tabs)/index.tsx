@@ -24,6 +24,7 @@ export default function WardrobeScreen() {
   const [selectedStyles, setSelectedStyles] = useState<OutfitStyle[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
+  const [expandedSubcategories, setExpandedSubcategories] = useState<Set<string>>(new Set());
 
   const filteredItems = useMemo(() => {
     let result = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
@@ -139,13 +140,60 @@ export default function WardrobeScreen() {
   const expandAllBrands = () => {
     const allBrands = groupedByBrand.map(g => g.brand);
     setExpandedBrands(new Set(allBrands));
+    const allSubcats: string[] = [];
+    groupedByBrand.forEach(g => {
+      g.subcategories.forEach(sub => {
+        allSubcats.push(`${g.brand}:${sub.name}`);
+      });
+    });
+    setExpandedSubcategories(new Set(allSubcats));
   };
 
   const collapseAllBrands = () => {
     setExpandedBrands(new Set());
+    setExpandedSubcategories(new Set());
+  };
+
+  const toggleSubcategoryExpanded = (brand: string, subcategory: string) => {
+    const key = `${brand}:${subcategory}`;
+    setExpandedSubcategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
   };
 
   const groupedByBrand = useMemo(() => {
+    const getSubcategoryForItem = (item: typeof filteredItems[0]): string => {
+      if (item.category === 'sneaker') {
+        return item.silhouette || 'Other';
+      } else if (item.category === 'top' || item.category === 'bottom') {
+        if (item.subtype) {
+          const subtypeLabels: { [key: string]: string } = {
+            tshirt: 'Short Sleeve',
+            polo: 'Polo',
+            buttondown: 'Button Down',
+            sweatshirt: 'Long Sleeve',
+            outerwear: 'Outerwear',
+            jeans: 'Jeans',
+            dressslacks: 'Dress Slacks',
+            sweatpants: 'Sweatpants',
+            shorts: 'Shorts',
+            gymshorts: 'Gym Shorts',
+          };
+          return subtypeLabels[item.subtype] || item.subtype;
+        }
+        return 'Other';
+      } else if (item.category === 'hat') {
+        return item.team || item.brand || 'Other';
+      }
+      return 'Other';
+    };
+
     const groups: { [key: string]: typeof filteredItems } = {};
     
     filteredItems.forEach(item => {
@@ -163,33 +211,47 @@ export default function WardrobeScreen() {
     });
     
     const subtypeOrder: { [key: string]: number } = {
-      tshirt: 1,
-      polo: 2,
-      buttondown: 3,
-      sweatshirt: 4,
-      outerwear: 5,
-      jeans: 6,
-      dressslacks: 7,
-      sweatpants: 8,
-      shorts: 9,
-      gymshorts: 10,
+      'Short Sleeve': 1,
+      'Polo': 2,
+      'Button Down': 3,
+      'Long Sleeve': 4,
+      'Outerwear': 5,
+      'Jeans': 6,
+      'Dress Slacks': 7,
+      'Sweatpants': 8,
+      'Shorts': 9,
+      'Gym Shorts': 10,
+      'Other': 999,
     };
     
-    return sortedBrands.map(brand => ({
-      brand,
-      items: groups[brand].sort((a, b) => {
-        const aSubtype = a.subtype || 'zzz';
-        const bSubtype = b.subtype || 'zzz';
-        const aOrder = subtypeOrder[aSubtype] || 999;
-        const bOrder = subtypeOrder[bSubtype] || 999;
-        
-        if (aOrder !== bOrder) {
-          return aOrder - bOrder;
+    return sortedBrands.map(brand => {
+      const brandItems = groups[brand];
+      const subcatGroups: { [key: string]: typeof filteredItems } = {};
+      
+      brandItems.forEach(item => {
+        const subcat = getSubcategoryForItem(item);
+        if (!subcatGroups[subcat]) {
+          subcatGroups[subcat] = [];
         }
-        
-        return (a.name || '').localeCompare(b.name || '');
-      })
-    }));
+        subcatGroups[subcat].push(item);
+      });
+      
+      const sortedSubcats = Object.keys(subcatGroups).sort((a, b) => {
+        const aOrder = subtypeOrder[a] || 500;
+        const bOrder = subtypeOrder[b] || 500;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.localeCompare(b);
+      });
+      
+      return {
+        brand,
+        items: brandItems,
+        subcategories: sortedSubcats.map(subcat => ({
+          name: subcat,
+          items: subcatGroups[subcat].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+        })),
+      };
+    });
   }, [filteredItems]);
 
   const categories = [
@@ -460,6 +522,7 @@ export default function WardrobeScreen() {
                 )}
                 {groupedByBrand.map((group) => {
                   const isExpanded = expandedBrands.has(group.brand);
+                  const hasSubcategories = group.subcategories.length > 1 || (group.subcategories.length === 1 && group.subcategories[0].name !== 'Other');
                   return (
                     <View key={group.brand} style={styles.brandSection}>
                       <TouchableOpacity 
@@ -480,93 +543,213 @@ export default function WardrobeScreen() {
                         </View>
                       </TouchableOpacity>
                       {isExpanded && (
-                        <View style={styles.grid}>
-                    {group.items.map((item) => (
-                      <TouchableOpacity 
-                        key={item.id} 
-                        style={styles.card}
-                        onPress={() => {
-                          router.push({
-                            pathname: "/add" as any,
-                            params: { editId: item.id as string },
-                          });
-                        }}
-                      >
-                        <Image
-                          source={{ uri: item.imageUrl }}
-                          style={styles.cardImage}
-                          contentFit="cover"
-                          placeholder={require("../../assets/images/icon.png")}
-                          placeholderContentFit="contain"
-                          transition={200}
-                          cachePolicy="memory-disk"
-                          onError={(error) => {
-                            console.error("[Card Image Error]", item.id, item.imageUrl, error);
-                          }}
-                          onLoad={() => {
-                            console.log("[Card Image Loaded]", item.id);
-                          }}
-                        />
-                        <View style={styles.cardOverlay}>
-                          <TouchableOpacity 
-                            style={styles.cardActionButton}
-                            onPress={() => {
-                              router.push({
-                                pathname: "/add" as any,
-                                params: { editId: item.id as string },
-                              });
-                            }}
-                          >
-                            <Edit size={14} color="#FFF" />
-                          </TouchableOpacity>
-                          <TouchableOpacity 
-                            style={styles.cardActionButton}
-                            onPress={() => {
-                              Alert.alert(
-                                "Delete Item",
-                                `Are you sure you want to delete "${item.name}"?`,
-                                [
-                                  { text: "Cancel", style: "cancel" },
-                                  { 
-                                    text: "Delete", 
-                                    style: "destructive",
-                                    onPress: () => deleteItem(item.id),
-                                  },
-                                ]
+                        <View style={styles.brandContent}>
+                          {hasSubcategories ? (
+                            group.subcategories.map((subcat) => {
+                              const subcatKey = `${group.brand}:${subcat.name}`;
+                              const isSubcatExpanded = expandedSubcategories.has(subcatKey);
+                              return (
+                                <View key={subcatKey} style={styles.subcategorySection}>
+                                  <TouchableOpacity
+                                    style={styles.subcategoryHeaderRow}
+                                    onPress={() => toggleSubcategoryExpanded(group.brand, subcat.name)}
+                                    activeOpacity={0.7}
+                                  >
+                                    <View style={styles.subcategoryHeaderLeft}>
+                                      {isSubcatExpanded ? (
+                                        <ChevronDown size={16} color={COLORS.textSecondary} />
+                                      ) : (
+                                        <ChevronRight size={16} color={COLORS.textSecondary} />
+                                      )}
+                                      <Text style={styles.subcategoryHeader}>{subcat.name}</Text>
+                                    </View>
+                                    <View style={styles.subcategoryItemCount}>
+                                      <Text style={styles.subcategoryItemCountText}>{subcat.items.length}</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                  {isSubcatExpanded && (
+                                    <View style={styles.grid}>
+                                      {subcat.items.map((item) => (
+                                        <TouchableOpacity 
+                                          key={item.id} 
+                                          style={styles.card}
+                                          onPress={() => {
+                                            router.push({
+                                              pathname: "/add" as any,
+                                              params: { editId: item.id as string },
+                                            });
+                                          }}
+                                        >
+                                          <Image
+                                            source={{ uri: item.imageUrl }}
+                                            style={styles.cardImage}
+                                            contentFit="cover"
+                                            placeholder={require("../../assets/images/icon.png")}
+                                            placeholderContentFit="contain"
+                                            transition={200}
+                                            cachePolicy="memory-disk"
+                                            onError={(error) => {
+                                              console.error("[Card Image Error]", item.id, item.imageUrl, error);
+                                            }}
+                                            onLoad={() => {
+                                              console.log("[Card Image Loaded]", item.id);
+                                            }}
+                                          />
+                                          <View style={styles.cardOverlay}>
+                                            <TouchableOpacity 
+                                              style={styles.cardActionButton}
+                                              onPress={() => {
+                                                router.push({
+                                                  pathname: "/add" as any,
+                                                  params: { editId: item.id as string },
+                                                });
+                                              }}
+                                            >
+                                              <Edit size={14} color="#FFF" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity 
+                                              style={styles.cardActionButton}
+                                              onPress={() => {
+                                                Alert.alert(
+                                                  "Delete Item",
+                                                  `Are you sure you want to delete "${item.name}"?`,
+                                                  [
+                                                    { text: "Cancel", style: "cancel" },
+                                                    { 
+                                                      text: "Delete", 
+                                                      style: "destructive",
+                                                      onPress: () => deleteItem(item.id),
+                                                    },
+                                                  ]
+                                                );
+                                              }}
+                                            >
+                                              <Trash2 size={14} color="#FFF" />
+                                            </TouchableOpacity>
+                                          </View>
+                                          <View style={styles.cardContent}>
+                                            <Text style={styles.cardTitle} numberOfLines={1}>
+                                              {item.name}
+                                            </Text>
+                                            {item.brand && (
+                                              <Text style={styles.cardBrand} numberOfLines={1}>
+                                                {item.brand}
+                                              </Text>
+                                            )}
+                                            <View style={styles.cardFooter}>
+                                              <Text style={styles.cardPrice}>
+                                                {item.marketValue ? `${item.marketValue}` : "-"}
+                                              </Text>
+                                              <View style={[
+                                                styles.categoryChip,
+                                                item.category === "sneaker" && { backgroundColor: "#FF6B35" },
+                                                item.category === "top" && { backgroundColor: "#4ECDC4" },
+                                                item.category === "bottom" && { backgroundColor: "#95E1D3" },
+                                                item.category === "hat" && { backgroundColor: "#FFB84D" },
+                                              ]}>
+                                                <Text style={styles.categoryChipText}>
+                                                  {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
+                                                </Text>
+                                              </View>
+                                            </View>
+                                          </View>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  )}
+                                </View>
                               );
-                            }}
-                          >
-                            <Trash2 size={14} color="#FFF" />
-                          </TouchableOpacity>
-                        </View>
-                        <View style={styles.cardContent}>
-                          <Text style={styles.cardTitle} numberOfLines={1}>
-                            {item.name}
-                          </Text>
-                          {item.brand && (
-                            <Text style={styles.cardBrand} numberOfLines={1}>
-                              {item.brand}
-                            </Text>
-                          )}
-                          <View style={styles.cardFooter}>
-                            <Text style={styles.cardPrice}>
-                              {item.marketValue ? `${item.marketValue}` : "-"}
-                            </Text>
-                            <View style={[
-                              styles.categoryChip,
-                              item.category === "sneaker" && { backgroundColor: "#FF6B35" },
-                              item.category === "top" && { backgroundColor: "#4ECDC4" },
-                              item.category === "bottom" && { backgroundColor: "#95E1D3" },
-                              item.category === "hat" && { backgroundColor: "#FFB84D" },
-                            ]}>
-                              <Text style={styles.categoryChipText}>
-                                {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
-                              </Text>
+                            })
+                          ) : (
+                            <View style={styles.grid}>
+                              {group.items.map((item) => (
+                                <TouchableOpacity 
+                                  key={item.id} 
+                                  style={styles.card}
+                                  onPress={() => {
+                                    router.push({
+                                      pathname: "/add" as any,
+                                      params: { editId: item.id as string },
+                                    });
+                                  }}
+                                >
+                                  <Image
+                                    source={{ uri: item.imageUrl }}
+                                    style={styles.cardImage}
+                                    contentFit="cover"
+                                    placeholder={require("../../assets/images/icon.png")}
+                                    placeholderContentFit="contain"
+                                    transition={200}
+                                    cachePolicy="memory-disk"
+                                    onError={(error) => {
+                                      console.error("[Card Image Error]", item.id, item.imageUrl, error);
+                                    }}
+                                    onLoad={() => {
+                                      console.log("[Card Image Loaded]", item.id);
+                                    }}
+                                  />
+                                  <View style={styles.cardOverlay}>
+                                    <TouchableOpacity 
+                                      style={styles.cardActionButton}
+                                      onPress={() => {
+                                        router.push({
+                                          pathname: "/add" as any,
+                                          params: { editId: item.id as string },
+                                        });
+                                      }}
+                                    >
+                                      <Edit size={14} color="#FFF" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity 
+                                      style={styles.cardActionButton}
+                                      onPress={() => {
+                                        Alert.alert(
+                                          "Delete Item",
+                                          `Are you sure you want to delete "${item.name}"?`,
+                                          [
+                                            { text: "Cancel", style: "cancel" },
+                                            { 
+                                              text: "Delete", 
+                                              style: "destructive",
+                                              onPress: () => deleteItem(item.id),
+                                            },
+                                          ]
+                                        );
+                                      }}
+                                    >
+                                      <Trash2 size={14} color="#FFF" />
+                                    </TouchableOpacity>
+                                  </View>
+                                  <View style={styles.cardContent}>
+                                    <Text style={styles.cardTitle} numberOfLines={1}>
+                                      {item.name}
+                                    </Text>
+                                    {item.brand && (
+                                      <Text style={styles.cardBrand} numberOfLines={1}>
+                                        {item.brand}
+                                      </Text>
+                                    )}
+                                    <View style={styles.cardFooter}>
+                                      <Text style={styles.cardPrice}>
+                                        {item.marketValue ? `${item.marketValue}` : "-"}
+                                      </Text>
+                                      <View style={[
+                                        styles.categoryChip,
+                                        item.category === "sneaker" && { backgroundColor: "#FF6B35" },
+                                        item.category === "top" && { backgroundColor: "#4ECDC4" },
+                                        item.category === "bottom" && { backgroundColor: "#95E1D3" },
+                                        item.category === "hat" && { backgroundColor: "#FFB84D" },
+                                      ]}>
+                                        <Text style={styles.categoryChipText}>
+                                          {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
+                                        </Text>
+                                      </View>
+                                    </View>
+                                  </View>
+                                </TouchableOpacity>
+                              ))}
                             </View>
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
+                          )}
                         </View>
                       )}
                     </View>
@@ -920,6 +1103,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700" as const,
     color: "#FFF",
+  },
+  brandContent: {
+    paddingBottom: 4,
+  },
+  subcategorySection: {
+    marginLeft: 12,
+    marginTop: 4,
+    borderLeftWidth: 2,
+    borderLeftColor: COLORS.border,
+  },
+  subcategoryHeaderRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  subcategoryHeaderLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    flex: 1,
+  },
+  subcategoryHeader: {
+    fontSize: 14,
+    fontWeight: "500" as const,
+    color: COLORS.textSecondary,
+  },
+  subcategoryItemCount: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    minWidth: 24,
+    alignItems: "center" as const,
+  },
+  subcategoryItemCountText: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: COLORS.textSecondary,
   },
   expandCollapseRow: {
     flexDirection: "row" as const,
