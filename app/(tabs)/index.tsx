@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Shirt, Package, Sparkles, Trash2, Edit, Plus, Trash, Filter, X } from "lucide-react-native";
+import { Shirt, Package, Sparkles, Trash2, Edit, Plus, Trash, Filter, X, Grid3X3, List, Calendar } from "lucide-react-native";
 import { useState, useMemo } from "react";
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +22,7 @@ export default function WardrobeScreen() {
   const [selectedSubtypes, setSelectedSubtypes] = useState<string[]>([]);
   const [selectedSeasons, setSelectedSeasons] = useState<Season[]>([]);
   const [selectedStyles, setSelectedStyles] = useState<OutfitStyle[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const filteredItems = useMemo(() => {
     let result = selectedCategory === "all" ? items : items.filter(item => item.category === selectedCategory);
@@ -207,6 +208,16 @@ export default function WardrobeScreen() {
                 <Trash size={18} color={COLORS.error} />
               </TouchableOpacity>
             )}
+            <TouchableOpacity 
+              style={styles.viewModeButton}
+              onPress={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+            >
+              {viewMode === "grid" ? (
+                <List size={18} color={COLORS.text} />
+              ) : (
+                <Grid3X3 size={18} color={COLORS.text} />
+              )}
+            </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.filterButton, activeFiltersCount > 0 && styles.filterButtonActive]}
               onPress={() => setShowFilters(!showFilters)}
@@ -413,99 +424,192 @@ export default function WardrobeScreen() {
           </View>
         ) : (
           <View style={styles.sectionsContainer}>
-            {groupedByBrand.map((group) => (
-              <View key={group.brand} style={styles.brandSection}>
-                <Text style={styles.brandHeader}>{group.brand}</Text>
-                <View style={styles.grid}>
-                  {group.items.map((item) => (
-            <TouchableOpacity 
-              key={item.id} 
-              style={styles.card}
-              onPress={() => {
-                router.push({
-                  pathname: "/add" as any,
-                  params: { editId: item.id as string },
-                });
-              }}
-            >
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.cardImage}
-                contentFit="cover"
-                placeholder={require("../../assets/images/icon.png")}
-                placeholderContentFit="contain"
-                transition={200}
-                cachePolicy="memory-disk"
-                onError={(error) => {
-                  console.error("[Card Image Error]", item.id, item.imageUrl, error);
-                }}
-                onLoad={() => {
-                  console.log("[Card Image Loaded]", item.id);
-                }}
-              />
-              <View style={styles.cardOverlay}>
-                <TouchableOpacity 
-                  style={styles.cardActionButton}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/add" as any,
-                      params: { editId: item.id as string },
-                    });
-                  }}
-                >
-                  <Edit size={14} color="#FFF" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.cardActionButton}
-                  onPress={() => {
-                    Alert.alert(
-                      "Delete Item",
-                      `Are you sure you want to delete "${item.name}"?`,
-                      [
-                        { text: "Cancel", style: "cancel" },
-                        { 
-                          text: "Delete", 
-                          style: "destructive",
-                          onPress: () => deleteItem(item.id),
-                        },
-                      ]
-                    );
-                  }}
-                >
-                  <Trash2 size={14} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                {item.brand && (
-                  <Text style={styles.cardBrand} numberOfLines={1}>
-                    {item.brand}
-                  </Text>
-                )}
-                <View style={styles.cardFooter}>
-                  <Text style={styles.cardPrice}>
-                    {item.marketValue ? `${item.marketValue}` : "-"}
-                  </Text>
-                  <View style={[
-                    styles.categoryChip,
-                    item.category === "sneaker" && { backgroundColor: "#FF6B35" },
-                    item.category === "top" && { backgroundColor: "#4ECDC4" },
-                    item.category === "bottom" && { backgroundColor: "#95E1D3" },
-                    item.category === "hat" && { backgroundColor: "#FFB84D" },
-                  ]}>
-                    <Text style={styles.categoryChipText}>
-                      {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
-                    </Text>
+            {viewMode === "grid" ? (
+              groupedByBrand.map((group) => (
+                <View key={group.brand} style={styles.brandSection}>
+                  <Text style={styles.brandHeader}>{group.brand}</Text>
+                  <View style={styles.grid}>
+                    {group.items.map((item) => (
+                      <TouchableOpacity 
+                        key={item.id} 
+                        style={styles.card}
+                        onPress={() => {
+                          router.push({
+                            pathname: "/add" as any,
+                            params: { editId: item.id as string },
+                          });
+                        }}
+                      >
+                        <Image
+                          source={{ uri: item.imageUrl }}
+                          style={styles.cardImage}
+                          contentFit="cover"
+                          placeholder={require("../../assets/images/icon.png")}
+                          placeholderContentFit="contain"
+                          transition={200}
+                          cachePolicy="memory-disk"
+                          onError={(error) => {
+                            console.error("[Card Image Error]", item.id, item.imageUrl, error);
+                          }}
+                          onLoad={() => {
+                            console.log("[Card Image Loaded]", item.id);
+                          }}
+                        />
+                        <View style={styles.cardOverlay}>
+                          <TouchableOpacity 
+                            style={styles.cardActionButton}
+                            onPress={() => {
+                              router.push({
+                                pathname: "/add" as any,
+                                params: { editId: item.id as string },
+                              });
+                            }}
+                          >
+                            <Edit size={14} color="#FFF" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.cardActionButton}
+                            onPress={() => {
+                              Alert.alert(
+                                "Delete Item",
+                                `Are you sure you want to delete "${item.name}"?`,
+                                [
+                                  { text: "Cancel", style: "cancel" },
+                                  { 
+                                    text: "Delete", 
+                                    style: "destructive",
+                                    onPress: () => deleteItem(item.id),
+                                  },
+                                ]
+                              );
+                            }}
+                          >
+                            <Trash2 size={14} color="#FFF" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.cardContent}>
+                          <Text style={styles.cardTitle} numberOfLines={1}>
+                            {item.name}
+                          </Text>
+                          {item.brand && (
+                            <Text style={styles.cardBrand} numberOfLines={1}>
+                              {item.brand}
+                            </Text>
+                          )}
+                          <View style={styles.cardFooter}>
+                            <Text style={styles.cardPrice}>
+                              {item.marketValue ? `${item.marketValue}` : "-"}
+                            </Text>
+                            <View style={[
+                              styles.categoryChip,
+                              item.category === "sneaker" && { backgroundColor: "#FF6B35" },
+                              item.category === "top" && { backgroundColor: "#4ECDC4" },
+                              item.category === "bottom" && { backgroundColor: "#95E1D3" },
+                              item.category === "hat" && { backgroundColor: "#FFB84D" },
+                            ]}>
+                              <Text style={styles.categoryChipText}>
+                                {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </View>
+              ))
+            ) : (
+              <View style={styles.listContainer}>
+                {filteredItems.map((item) => (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={styles.listItem}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/add" as any,
+                        params: { editId: item.id as string },
+                      });
+                    }}
+                  >
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={styles.listItemImage}
+                      contentFit="cover"
+                      placeholder={require("../../assets/images/icon.png")}
+                      placeholderContentFit="contain"
+                      transition={200}
+                      cachePolicy="memory-disk"
+                    />
+                    <View style={styles.listItemContent}>
+                      <View style={styles.listItemHeader}>
+                        <Text style={styles.listItemName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <View style={[
+                          styles.listCategoryChip,
+                          item.category === "sneaker" && { backgroundColor: "#FF6B35" },
+                          item.category === "top" && { backgroundColor: "#4ECDC4" },
+                          item.category === "bottom" && { backgroundColor: "#95E1D3" },
+                          item.category === "hat" && { backgroundColor: "#FFB84D" },
+                        ]}>
+                          <Text style={styles.listCategoryText}>
+                            {item.category === "sneaker" ? "👟" : item.category === "top" ? "👕" : item.category === "bottom" ? "👖" : "🧢"}
+                          </Text>
+                        </View>
+                      </View>
+                      {item.brand && (
+                        <Text style={styles.listItemBrand}>{item.brand}</Text>
+                      )}
+                      <View style={styles.listItemFooter}>
+                        <View style={styles.lastWornContainer}>
+                          <Calendar size={12} color={COLORS.textSecondary} />
+                          <Text style={styles.lastWornText}>
+                            {item.dateLastWorn 
+                              ? new Date(item.dateLastWorn).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                              : 'Never worn'}
+                          </Text>
+                        </View>
+                        <Text style={styles.listItemPrice}>
+                          {item.marketValue ? `${item.marketValue}` : "-"}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.listItemActions}>
+                      <TouchableOpacity 
+                        style={styles.listActionButton}
+                        onPress={() => {
+                          router.push({
+                            pathname: "/add" as any,
+                            params: { editId: item.id as string },
+                          });
+                        }}
+                      >
+                        <Edit size={16} color={COLORS.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={styles.listActionButton}
+                        onPress={() => {
+                          Alert.alert(
+                            "Delete Item",
+                            `Are you sure you want to delete "${item.name}"?`,
+                            [
+                              { text: "Cancel", style: "cancel" },
+                              { 
+                                text: "Delete", 
+                                style: "destructive",
+                                onPress: () => deleteItem(item.id),
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <Trash2 size={16} color={COLORS.error} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
-            </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ))}
+            )}
           </View>
         )}
       </ScrollView>
@@ -543,6 +647,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   deleteAllButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  viewModeButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -868,5 +982,85 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: "#FFF",
+  },
+  listContainer: {
+    gap: 8,
+  },
+  listItem: {
+    flexDirection: "row",
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: "center",
+    gap: 12,
+  },
+  listItemImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: COLORS.background,
+  },
+  listItemContent: {
+    flex: 1,
+    gap: 4,
+  },
+  listItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  listItemName: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: COLORS.text,
+    flex: 1,
+  },
+  listCategoryChip: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  listCategoryText: {
+    fontSize: 12,
+  },
+  listItemBrand: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: "500" as const,
+  },
+  listItemFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  lastWornContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  lastWornText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
+  listItemPrice: {
+    fontSize: 14,
+    fontWeight: "700" as const,
+    color: COLORS.text,
+  },
+  listItemActions: {
+    flexDirection: "column",
+    gap: 8,
+  },
+  listActionButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.background,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
