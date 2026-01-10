@@ -795,6 +795,9 @@ Return ONLY the JSON object.`;
     }
 
     setIsIdentifyingShoe(true);
+    console.log("[Shoe Identification] ========== STARTING PHOTO ANALYSIS ==========");
+    console.log("[Shoe Identification] Image URIs:", imageUris.map(uri => uri.substring(0, 50) + "..."));
+    
     try {
       console.log("[Shoe Identification] Starting ENHANCED AI analysis... (Attempt " + (retryCount + 1) + "/3)");
       console.log("[Shoe Identification] Analyzing", imageUris.length, "image(s) for maximum accuracy");
@@ -804,22 +807,30 @@ Return ONLY the JSON object.`;
       for (let i = 0; i < imageUris.length; i++) {
         const imageUri = imageUris[i];
         console.log("[Shoe Identification] Processing image", i + 1, "of", imageUris.length);
+        console.log("[Shoe Identification] URI type:", imageUri.startsWith('file://') ? 'file://' : imageUri.startsWith('data:') ? 'data:' : imageUri.startsWith('http') ? 'http' : 'unknown');
         
         let base64Image = imageUri;
         if (imageUri.startsWith('file://') || (!imageUri.startsWith('data:') && !imageUri.startsWith('http'))) {
           console.log("[Shoe Identification] Converting file URI to base64...");
           try {
             const response = await fetch(imageUri);
+            console.log("[Shoe Identification] Fetch response ok:", response.ok);
             const blob = await response.blob();
+            console.log("[Shoe Identification] Blob size:", blob.size, "type:", blob.type);
             const reader = new FileReader();
             base64Image = await new Promise<string>((resolve, reject) => {
               reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = reject;
+              reader.onerror = (e) => {
+                console.error("[Shoe Identification] FileReader error:", e);
+                reject(e);
+              };
               reader.readAsDataURL(blob);
             });
             console.log("[Shoe Identification] Converted to base64, length:", base64Image.length);
+            console.log("[Shoe Identification] Base64 prefix:", base64Image.substring(0, 30));
           } catch (convError) {
             console.error("[Shoe Identification] Error converting image", i + 1, ":", convError);
+            Alert.alert("Image Error", "Failed to process image " + (i + 1) + ". Try taking a new photo.");
             continue;
           }
         }
@@ -833,7 +844,12 @@ Return ONLY the JSON object.`;
       }
       
       if (base64Images.length === 0) {
-        throw new Error("Failed to process images. Please try again with different photos.");
+        console.error("[Shoe Identification] NO IMAGES CONVERTED TO BASE64!");
+        Alert.alert(
+          "Image Processing Failed",
+          "Could not process your photo(s). Please try:\n\n• Taking a new photo with the camera\n• Selecting a different image from library\n• Making sure the image file is not corrupted"
+        );
+        return false;
       }
       
       console.log("[Shoe Identification] Successfully processed", base64Images.length, "image(s)");
@@ -944,13 +960,18 @@ Return ONLY valid JSON:
 
       let aiResponse;
       try {
+        console.log("[Shoe Identification] Building AI request with", base64Images.length, "images");
         const contentArray: ({ type: "text"; text: string } | { type: "image"; image: string })[] = [
           { type: "text", text: prompt }
         ];
         
         for (const base64Image of base64Images) {
           contentArray.push({ type: "image", image: base64Image });
+          console.log("[Shoe Identification] Added image to request, total content items:", contentArray.length);
         }
+        
+        console.log("[Shoe Identification] Sending request to AI vision model...");
+        const startTime = Date.now();
         
         aiResponse = await generateText({
           messages: [
@@ -960,6 +981,8 @@ Return ONLY valid JSON:
             }
           ]
         });
+        
+        console.log("[Shoe Identification] AI response received in", Date.now() - startTime, "ms");
       } catch (aiError) {
         console.error("[Shoe Identification] generateText error:", aiError);
         if (aiError instanceof Error) {
