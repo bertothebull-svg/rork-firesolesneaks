@@ -463,31 +463,60 @@ Return ONLY the JSON object.`;
       
       while (attempt < maxAttempts) {
         try {
-          response = await generateText({ messages: [{ role: "user", content: searchPrompt }] });
-          console.log("[Sneaker Search] AI Response (Attempt " + (attempt + 1) + "):", response);
-          if (response && response.trim().length > 0) {
-            break;
+          if (attempt > 0) {
+            const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 8000);
+            console.log("[Sneaker Search] Waiting", waitTime, "ms before retry...");
+            await new Promise(resolve => setTimeout(resolve, waitTime));
           }
+          
+          response = await generateText({ messages: [{ role: "user", content: searchPrompt }] });
+          console.log("[Sneaker Search] AI Response (Attempt " + (attempt + 1) + "):", typeof response, response?.substring?.(0, 200));
+          
+          if (!response || typeof response !== 'string' || response.trim().length === 0) {
+            console.error("[Sneaker Search] Empty or invalid response");
+            attempt++;
+            continue;
+          }
+          
+          const trimmedResp = response.trim();
+          const lowerResp = trimmedResp.toLowerCase();
+          
+          if (lowerResp.startsWith('rate') || 
+              lowerResp.startsWith('resource') ||
+              lowerResp.startsWith('error') ||
+              lowerResp.includes('rate limit') ||
+              lowerResp.includes('too many requests') ||
+              lowerResp.includes('resource exhausted') ||
+              lowerResp.includes('quota exceeded')) {
+            console.error("[Sneaker Search] Rate limit/error detected:", trimmedResp.substring(0, 150));
+            attempt++;
+            continue;
+          }
+          
+          if (!trimmedResp.includes('{')) {
+            console.error("[Sneaker Search] Response doesn't contain JSON:", trimmedResp.substring(0, 150));
+            attempt++;
+            continue;
+          }
+          
+          break;
         } catch (err) {
           console.error("[Sneaker Search] Attempt", attempt + 1, "failed:", err);
           if (attempt === maxAttempts - 1) {
-            throw err;
+            throw new Error("AI service is temporarily unavailable. Please try again in a moment.");
           }
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
         }
         attempt++;
       }
       
       if (!response || response.trim().length === 0) {
-        throw new Error("No response from AI after " + maxAttempts + " attempts");
+        throw new Error("AI service is busy. Please wait a moment and try again.");
       }
       
       const trimmedResp = response.trim();
-      if (trimmedResp.toLowerCase().startsWith('rate') || 
-          trimmedResp.toLowerCase().includes('rate limit') ||
-          trimmedResp.toLowerCase().includes('too many requests')) {
-        console.error("[Sneaker Search] Rate limit detected:", trimmedResp.substring(0, 100));
-        throw new Error("AI service is busy. Please wait a moment and try again.");
+      if (!trimmedResp.includes('{')) {
+        console.error("[Sneaker Search] Final response has no JSON:", trimmedResp.substring(0, 150));
+        throw new Error("AI service returned an unexpected response. Please try again.");
       }
 
       const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -972,6 +1001,12 @@ Return ONLY valid JSON:
       
       while (aiAttempt < maxAiAttempts) {
         try {
+          if (aiAttempt > 0) {
+            const waitTime = Math.min(2000 * Math.pow(2, aiAttempt - 1), 8000);
+            console.log("[Shoe Identification] Waiting", waitTime, "ms before retry...");
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          
           console.log("[Shoe Identification] Building AI request with", base64Images.length, "images (attempt", aiAttempt + 1, ")");
           const contentArray: ({ type: "text"; text: string } | { type: "image"; image: string })[] = [
             { type: "text", text: prompt }
@@ -983,12 +1018,6 @@ Return ONLY valid JSON:
           
           console.log("[Shoe Identification] Sending request to AI vision model...");
           const startTime = Date.now();
-          
-          if (aiAttempt > 0) {
-            const waitTime = 1500 * (aiAttempt + 1);
-            console.log("[Shoe Identification] Waiting", waitTime, "ms before retry...");
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-          }
           
           aiResponse = await generateText({
             messages: [
@@ -1003,32 +1032,32 @@ Return ONLY valid JSON:
           console.log("[Shoe Identification] Raw response type:", typeof aiResponse);
           console.log("[Shoe Identification] Raw response preview:", String(aiResponse).substring(0, 300));
           
-          if (!aiResponse || typeof aiResponse !== 'string') {
+          if (!aiResponse || typeof aiResponse !== 'string' || aiResponse.trim().length === 0) {
             console.error("[Shoe Identification] Empty or invalid response from AI");
-            throw new Error("No response from AI service");
+            aiAttempt++;
+            continue;
           }
           
           const trimmedResponse = aiResponse.trim();
+          const lowerResponse = trimmedResponse.toLowerCase();
           
-          if (trimmedResponse.toLowerCase().startsWith('rate') || 
-              trimmedResponse.toLowerCase().includes('rate limit') ||
-              trimmedResponse.toLowerCase().includes('too many requests') ||
-              trimmedResponse.toLowerCase().includes('resource exhausted')) {
-            console.error("[Shoe Identification] Rate limit detected:", trimmedResponse.substring(0, 100));
-            if (aiAttempt < maxAiAttempts - 1) {
-              aiAttempt++;
-              continue;
-            }
-            throw new Error("AI service is busy. Please wait a moment and try again.");
+          if (lowerResponse.startsWith('rate') || 
+              lowerResponse.startsWith('resource') ||
+              lowerResponse.startsWith('error') ||
+              lowerResponse.includes('rate limit') ||
+              lowerResponse.includes('too many requests') ||
+              lowerResponse.includes('resource exhausted') ||
+              lowerResponse.includes('quota exceeded') ||
+              lowerResponse.includes('temporarily unavailable')) {
+            console.error("[Shoe Identification] Rate limit/error detected:", trimmedResponse.substring(0, 150));
+            aiAttempt++;
+            continue;
           }
           
           if (!trimmedResponse.includes('{')) {
             console.error("[Shoe Identification] Response does not contain JSON:", trimmedResponse.substring(0, 200));
-            if (aiAttempt < maxAiAttempts - 1) {
-              aiAttempt++;
-              continue;
-            }
-            throw new Error("Unexpected response from AI. Please try again.");
+            aiAttempt++;
+            continue;
           }
           
           break;
@@ -1040,22 +1069,13 @@ Return ONLY valid JSON:
               name: aiError.name,
               message: aiError.message,
             });
-            
-            if (aiError.message.includes('busy') || aiError.message.includes('wait')) {
-              if (aiAttempt < maxAiAttempts - 1) {
-                aiAttempt++;
-                continue;
-              }
-              throw aiError;
-            }
           }
-          
-          if (aiAttempt < maxAiAttempts - 1) {
-            aiAttempt++;
-            continue;
-          }
-          throw new Error("AI service is temporarily unavailable. Please try again in a moment or enter details manually.");
+          aiAttempt++;
         }
+      }
+      
+      if (!aiResponse || !aiResponse.trim().includes('{')) {
+        throw new Error("AI service is busy. Please wait a moment and try again, or enter details manually.");
       }
 
       console.log("[Shoe Identification] AI Response type:", typeof aiResponse);
