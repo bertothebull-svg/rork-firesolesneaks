@@ -194,9 +194,9 @@ Return ONLY the shoe name, nothing else. No explanation.`;
     "7", "7.5", "8", "8.5", "9", "9.5", "10", "10.5", "11", "11.5", "12", "12.5", "13"
   ];
 
-  const clothingSizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
-  const bottomsSizes = ["28", "30", "32", "34", "36", "38", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"];
-  const hatSizes = ["6.5", "6.75", "7", "7.125", "7.25", "7.375", "7.5", "7.625", "7.75", "7.875", "8"];
+  const clothingSizes = ["S", "M", "L", "XL", "2XL", "3XL", "4XL"];
+  const bottomsSizes = ["S", "M", "L", "XL", "2XL", "3XL", "4XL", "30", "32", "34", "36", "38", "40", "42", "44", "46", "48"];
+  const hatSizes = ["6 1/2", "6 5/8", "6 3/4", "6 7/8", "7", "7 1/8", "7 1/4", "7 3/8", "7 1/2", "7 5/8", "7 3/4", "7 7/8", "8"];
 
   useFocusEffect(
     useReactCallback(() => {
