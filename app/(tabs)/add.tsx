@@ -1003,11 +1003,15 @@ Return ONLY valid JSON:
         if (!text || typeof text !== 'string') return true;
         const trimmed = text.trim();
         const lower = trimmed.toLowerCase();
-        const firstChar = trimmed.charAt(0);
         
-        if (firstChar !== '{' && firstChar !== '[') {
-          console.log("[Shoe Identification] Response doesn't start with JSON, first char:", firstChar, "(code:", firstChar.charCodeAt(0), ")");
-          console.log("[Shoe Identification] Response preview:", trimmed.substring(0, 100));
+        // Check if response contains JSON (could be wrapped in markdown code blocks)
+        const hasJsonContent = trimmed.includes('{') && trimmed.includes('}');
+        const startsWithCodeBlock = trimmed.startsWith('```');
+        const startsWithJson = trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[';
+        
+        if (!hasJsonContent && !startsWithCodeBlock && !startsWithJson) {
+          console.log("[Shoe Identification] Response doesn't contain JSON");
+          console.log("[Shoe Identification] Response preview:", trimmed.substring(0, 150));
           return true;
         }
         
@@ -1017,15 +1021,17 @@ Return ONLY valid JSON:
           'too many requests', 'quota exceeded',
           'temporarily unavailable', 'service unavailable',
           'internal error', 'server error',
-          'try again', 'please wait',
           'api error', 'request failed',
-          'exceeded', 'throttl', 'blocked'
+          'throttl', 'blocked'
         ];
         
-        for (const pattern of errorPatterns) {
-          if (lower.includes(pattern)) {
-            console.log("[Shoe Identification] Error pattern detected:", pattern);
-            return true;
+        // Only check for error patterns if it doesn't look like valid JSON
+        if (!hasJsonContent) {
+          for (const pattern of errorPatterns) {
+            if (lower.includes(pattern)) {
+              console.log("[Shoe Identification] Error pattern detected:", pattern);
+              return true;
+            }
           }
         }
         
@@ -1097,7 +1103,7 @@ Return ONLY valid JSON:
         }
       }
       
-      if (!aiResponse || !aiResponse.includes('{') || isErrorResponse(aiResponse)) {
+      if (!aiResponse || !aiResponse.includes('{')) {
         throw new Error("AI service is temporarily busy. Please wait 30 seconds and try again, or enter details manually.");
       }
 
@@ -1143,10 +1149,46 @@ Return ONLY valid JSON:
           cleanJsonString = cleanJsonString.substring(0, lastBrace + 1);
         }
         
+        // Fix truncated JSON - ensure all strings and objects are properly closed
+        let openBraces = 0;
+        let openBrackets = 0;
+        let inString = false;
+        let lastChar = '';
+        
+        for (let i = 0; i < cleanJsonString.length; i++) {
+          const char = cleanJsonString[i];
+          if (char === '"' && lastChar !== '\\') {
+            inString = !inString;
+          } else if (!inString) {
+            if (char === '{') openBraces++;
+            else if (char === '}') openBraces--;
+            else if (char === '[') openBrackets++;
+            else if (char === ']') openBrackets--;
+          }
+          lastChar = char;
+        }
+        
+        // If string is unclosed, close it
+        if (inString) {
+          cleanJsonString += '"';
+        }
+        
+        // Close any unclosed brackets/braces
+        while (openBrackets > 0) {
+          cleanJsonString += ']';
+          openBrackets--;
+        }
+        while (openBraces > 0) {
+          cleanJsonString += '}';
+          openBraces--;
+        }
+        
         cleanJsonString = cleanJsonString
           .replace(/[\x00-\x1F\x7F]/g, ' ')
           .replace(/,\s*}/g, '}')
-          .replace(/,\s*]/g, ']');
+          .replace(/,\s*]/g, ']')
+          .replace(/"[^"]*$/g, '""') // Fix any remaining unclosed strings at the end
+          .replace(/,\s*""\s*}/g, '}'); // Clean up empty strings before closing brace
         
         console.log("[Shoe Identification] Attempting to parse JSON:", cleanJsonString.substring(0, 300));
         result = JSON.parse(cleanJsonString);
