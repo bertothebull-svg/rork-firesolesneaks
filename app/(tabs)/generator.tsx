@@ -500,61 +500,38 @@ Prioritize items marked with the current season.${feedbackContext}`;
     }
     
     const generateAllOutfits = async () => {
-      const outfitA = await generateMutation.mutateAsync({ 
-        style: selectedStyle, 
-        forceNew: true, 
-        useOutfit: 'A' 
-      });
+      console.log("[Generate] Starting parallel outfit generation...");
+      const startTime = Date.now();
+      
+      const [outfitA, outfitB, outfitC, outfitD] = await Promise.all([
+        generateMutation.mutateAsync({ 
+          style: selectedStyle, 
+          forceNew: true, 
+          useOutfit: 'A'
+        }),
+        generateMutation.mutateAsync({ 
+          style: selectedStyle, 
+          forceNew: true, 
+          useOutfit: 'B'
+        }),
+        generateMutation.mutateAsync({ 
+          style: selectedStyle, 
+          forceNew: true, 
+          useOutfit: 'C'
+        }),
+        generateMutation.mutateAsync({ 
+          style: selectedStyle, 
+          forceNew: true, 
+          useOutfit: 'D'
+        }),
+      ]);
+      
+      console.log("[Generate] All outfits generated in", Date.now() - startTime, "ms");
+      
       setGeneratedOutfitA(outfitA);
-      
-      const excludeItemsForB: string[] = [];
-      if (tops.length > 1) excludeItemsForB.push(outfitA.topId);
-      if (tops.length > 1 && outfitA.outerLayerId) excludeItemsForB.push(outfitA.outerLayerId);
-      if (bottoms.length > 1) excludeItemsForB.push(outfitA.bottomId);
-      if (sneakers.length > 1) excludeItemsForB.push(outfitA.sneakerId);
-      if (socks.length > 1 && outfitA.sockId) excludeItemsForB.push(outfitA.sockId);
-      if (hats.length > 1 && outfitA.hatId) excludeItemsForB.push(outfitA.hatId);
-      
-      const outfitB = await generateMutation.mutateAsync({ 
-        style: selectedStyle, 
-        forceNew: true, 
-        useOutfit: 'B',
-        excludeItems: excludeItemsForB
-      });
       setGeneratedOutfitB(outfitB);
-      
-      const excludeItemsForC: string[] = [...excludeItemsForB];
-      if (tops.length > 2) excludeItemsForC.push(outfitB.topId);
-      if (tops.length > 2 && outfitB.outerLayerId) excludeItemsForC.push(outfitB.outerLayerId);
-      if (bottoms.length > 2) excludeItemsForC.push(outfitB.bottomId);
-      if (sneakers.length > 2) excludeItemsForC.push(outfitB.sneakerId);
-      if (socks.length > 2 && outfitB.sockId) excludeItemsForC.push(outfitB.sockId);
-      if (hats.length > 2 && outfitB.hatId) excludeItemsForC.push(outfitB.hatId);
-      
-      const outfitC = await generateMutation.mutateAsync({ 
-        style: selectedStyle, 
-        forceNew: true, 
-        useOutfit: 'C',
-        excludeItems: excludeItemsForC
-      });
       setGeneratedOutfitC(outfitC);
-      
-      const excludeItemsForD: string[] = [...excludeItemsForC];
-      if (tops.length > 3) excludeItemsForD.push(outfitC.topId);
-      if (tops.length > 3 && outfitC.outerLayerId) excludeItemsForD.push(outfitC.outerLayerId);
-      if (bottoms.length > 3) excludeItemsForD.push(outfitC.bottomId);
-      if (sneakers.length > 3) excludeItemsForD.push(outfitC.sneakerId);
-      if (socks.length > 3 && outfitC.sockId) excludeItemsForD.push(outfitC.sockId);
-      if (hats.length > 3 && outfitC.hatId) excludeItemsForD.push(outfitC.hatId);
-      
-      const outfitD = await generateMutation.mutateAsync({ 
-        style: selectedStyle, 
-        forceNew: true, 
-        useOutfit: 'D',
-        excludeItems: excludeItemsForD
-      });
       setGeneratedOutfitD(outfitD);
-      
       setSelectedOutfit('A');
       
       setTimeout(() => {

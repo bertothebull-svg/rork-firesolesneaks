@@ -298,7 +298,7 @@ Return ONLY the shoe name, nothing else. No explanation.`;
       
       console.log("[Google Image Search] Will try", queries.length, "different search strategies");
       
-      for (const query of queries.slice(0, 3)) {
+      const searchPromises = queries.slice(0, 2).map(async (query) => {
         try {
           console.log("[Google Image Search] Trying query:", query);
           const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cseId}&q=${encodeURIComponent(query)}&searchType=image&num=10&imgSize=large&imgType=photo&safe=off`;
@@ -310,26 +310,39 @@ Return ONLY the shoe name, nothing else. No explanation.`;
             if (response.status === 429) {
               throw new Error("Search rate limit exceeded. Please try again in a few minutes.");
             }
-            continue;
+            return { images: [], titles: [] };
           }
           
           const data = await response.json();
           console.log("[Google Image Search] Got", data.items?.length || 0, "results for this query");
           
+          const images: string[] = [];
+          const titles: string[] = [];
+          
           if (data.items && data.items.length > 0) {
             for (const item of data.items) {
-              if (item.link && !allImageUrls.includes(item.link)) {
-                allImageUrls.push(item.link);
-                const title = item.title || "";
-                pageTitles.push(title);
-                console.log("[Google Image Search] Page title:", title);
+              if (item.link) {
+                images.push(item.link);
+                titles.push(item.title || "");
               }
             }
           }
           
-          await new Promise(resolve => setTimeout(resolve, 300));
+          return { images, titles };
         } catch (error) {
           console.error("[Google Image Search] Query failed:", query, error);
+          return { images: [], titles: [] };
+        }
+      });
+      
+      const results = await Promise.all(searchPromises);
+      
+      for (const result of results) {
+        for (let i = 0; i < result.images.length; i++) {
+          if (!allImageUrls.includes(result.images[i])) {
+            allImageUrls.push(result.images[i]);
+            pageTitles.push(result.titles[i]);
+          }
         }
       }
       
