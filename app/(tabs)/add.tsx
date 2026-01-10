@@ -1001,11 +1001,13 @@ Return ONLY valid JSON:
       
       const isErrorResponse = (text: string): boolean => {
         if (!text || typeof text !== 'string') return true;
-        const lower = text.toLowerCase().trim();
-        const firstChar = lower.charAt(0);
+        const trimmed = text.trim();
+        const lower = trimmed.toLowerCase();
+        const firstChar = trimmed.charAt(0);
         
-        if (!'{"{['.includes(firstChar) && /^[a-z]/.test(firstChar)) {
-          console.log("[Shoe Identification] Response starts with letter, not JSON:", lower.substring(0, 50));
+        if (firstChar !== '{' && firstChar !== '[') {
+          console.log("[Shoe Identification] Response doesn't start with JSON, first char:", firstChar, "(code:", firstChar.charCodeAt(0), ")");
+          console.log("[Shoe Identification] Response preview:", trimmed.substring(0, 100));
           return true;
         }
         
@@ -1016,7 +1018,8 @@ Return ONLY valid JSON:
           'temporarily unavailable', 'service unavailable',
           'internal error', 'server error',
           'try again', 'please wait',
-          'api error', 'request failed'
+          'api error', 'request failed',
+          'exceeded', 'throttl', 'blocked'
         ];
         
         for (const pattern of errorPatterns) {
