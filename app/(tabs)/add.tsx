@@ -966,71 +966,115 @@ Return ONLY valid JSON:
   ]
 }`;
 
-      let aiResponse;
-      try {
-        console.log("[Shoe Identification] Building AI request with", base64Images.length, "images");
-        const contentArray: ({ type: "text"; text: string } | { type: "image"; image: string })[] = [
-          { type: "text", text: prompt }
-        ];
-        
-        for (const base64Image of base64Images) {
-          contentArray.push({ type: "image", image: base64Image });
-          console.log("[Shoe Identification] Added image to request, total content items:", contentArray.length);
-        }
-        
-        console.log("[Shoe Identification] Sending request to AI vision model...");
-        const startTime = Date.now();
-        
-        aiResponse = await generateText({
-          messages: [
-            {
-              role: "user",
-              content: contentArray
-            }
-          ]
-        });
-        
-        console.log("[Shoe Identification] AI response received in", Date.now() - startTime, "ms");
-        
-        if (!aiResponse || typeof aiResponse !== 'string') {
-          console.error("[Shoe Identification] Empty or invalid response from AI");
-          throw new Error("No response from AI service");
-        }
-        
-        const trimmedResponse = aiResponse.trim();
-        if (trimmedResponse.toLowerCase().startsWith('rate') || 
-            trimmedResponse.toLowerCase().includes('rate limit') ||
-            trimmedResponse.toLowerCase().includes('too many requests')) {
-          console.error("[Shoe Identification] Rate limit detected:", trimmedResponse.substring(0, 100));
-          throw new Error("AI service is busy. Please wait a moment and try again.");
-        }
-        
-        if (!trimmedResponse.includes('{')) {
-          console.error("[Shoe Identification] Response does not contain JSON:", trimmedResponse.substring(0, 200));
-          throw new Error("Unexpected response from AI. Please try again.");
-        }
-        
-      } catch (aiError) {
-        console.error("[Shoe Identification] generateText error:", aiError);
-        if (aiError instanceof Error) {
-          console.error("[Shoe Identification] Error details:", {
-            name: aiError.name,
-            message: aiError.message,
-            stack: aiError.stack?.substring(0, 300)
+      let aiResponse: string | undefined;
+      let aiAttempt = 0;
+      const maxAiAttempts = 3;
+      
+      while (aiAttempt < maxAiAttempts) {
+        try {
+          console.log("[Shoe Identification] Building AI request with", base64Images.length, "images (attempt", aiAttempt + 1, ")");
+          const contentArray: ({ type: "text"; text: string } | { type: "image"; image: string })[] = [
+            { type: "text", text: prompt }
+          ];
+          
+          for (const base64Image of base64Images) {
+            contentArray.push({ type: "image", image: base64Image });
+          }
+          
+          console.log("[Shoe Identification] Sending request to AI vision model...");
+          const startTime = Date.now();
+          
+          if (aiAttempt > 0) {
+            const waitTime = 1500 * (aiAttempt + 1);
+            console.log("[Shoe Identification] Waiting", waitTime, "ms before retry...");
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+          
+          aiResponse = await generateText({
+            messages: [
+              {
+                role: "user",
+                content: contentArray
+              }
+            ]
           });
           
-          if (aiError.message.includes('busy') || aiError.message.includes('wait')) {
-            throw aiError;
+          console.log("[Shoe Identification] AI response received in", Date.now() - startTime, "ms");
+          console.log("[Shoe Identification] Raw response type:", typeof aiResponse);
+          console.log("[Shoe Identification] Raw response preview:", String(aiResponse).substring(0, 300));
+          
+          if (!aiResponse || typeof aiResponse !== 'string') {
+            console.error("[Shoe Identification] Empty or invalid response from AI");
+            throw new Error("No response from AI service");
           }
+          
+          const trimmedResponse = aiResponse.trim();
+          
+          if (trimmedResponse.toLowerCase().startsWith('rate') || 
+              trimmedResponse.toLowerCase().includes('rate limit') ||
+              trimmedResponse.toLowerCase().includes('too many requests') ||
+              trimmedResponse.toLowerCase().includes('resource exhausted')) {
+            console.error("[Shoe Identification] Rate limit detected:", trimmedResponse.substring(0, 100));
+            if (aiAttempt < maxAiAttempts - 1) {
+              aiAttempt++;
+              continue;
+            }
+            throw new Error("AI service is busy. Please wait a moment and try again.");
+          }
+          
+          if (!trimmedResponse.includes('{')) {
+            console.error("[Shoe Identification] Response does not contain JSON:", trimmedResponse.substring(0, 200));
+            if (aiAttempt < maxAiAttempts - 1) {
+              aiAttempt++;
+              continue;
+            }
+            throw new Error("Unexpected response from AI. Please try again.");
+          }
+          
+          break;
+          
+        } catch (aiError) {
+          console.error("[Shoe Identification] generateText error (attempt", aiAttempt + 1, "):", aiError);
+          if (aiError instanceof Error) {
+            console.error("[Shoe Identification] Error details:", {
+              name: aiError.name,
+              message: aiError.message,
+            });
+            
+            if (aiError.message.includes('busy') || aiError.message.includes('wait')) {
+              if (aiAttempt < maxAiAttempts - 1) {
+                aiAttempt++;
+                continue;
+              }
+              throw aiError;
+            }
+          }
+          
+          if (aiAttempt < maxAiAttempts - 1) {
+            aiAttempt++;
+            continue;
+          }
+          throw new Error("AI service is temporarily unavailable. Please try again in a moment or enter details manually.");
         }
-        throw new Error("AI service is temporarily unavailable. Please try again in a moment or enter details manually.");
       }
 
       console.log("[Shoe Identification] AI Response type:", typeof aiResponse);
       console.log("[Shoe Identification] AI Response length:", aiResponse?.length || 0);
       console.log("[Shoe Identification] AI Response preview:", aiResponse?.substring(0, 200));
 
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      if (!aiResponse) {
+        throw new Error("No response received from AI. Please try again.");
+      }
+      
+      let jsonString = aiResponse;
+      
+      const codeBlockMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonString = codeBlockMatch[1].trim();
+        console.log("[Shoe Identification] Extracted JSON from code block");
+      }
+      
+      const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error("[Shoe Identification] No JSON found in response. Full response:", aiResponse.substring(0, 500));
         throw new Error("Could not analyze the shoe. Please try again or enter details manually.");
