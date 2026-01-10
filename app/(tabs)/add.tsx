@@ -999,11 +999,41 @@ Return ONLY valid JSON:
       let aiAttempt = 0;
       const maxAiAttempts = 3;
       
+      const isErrorResponse = (text: string): boolean => {
+        if (!text || typeof text !== 'string') return true;
+        const lower = text.toLowerCase().trim();
+        const firstChar = lower.charAt(0);
+        
+        if (!'{"{['.includes(firstChar) && /^[a-z]/.test(firstChar)) {
+          console.log("[Shoe Identification] Response starts with letter, not JSON:", lower.substring(0, 50));
+          return true;
+        }
+        
+        const errorPatterns = [
+          'rate limit', 'rate_limit', 'ratelimit',
+          'resource exhausted', 'resource_exhausted',
+          'too many requests', 'quota exceeded',
+          'temporarily unavailable', 'service unavailable',
+          'internal error', 'server error',
+          'try again', 'please wait',
+          'api error', 'request failed'
+        ];
+        
+        for (const pattern of errorPatterns) {
+          if (lower.includes(pattern)) {
+            console.log("[Shoe Identification] Error pattern detected:", pattern);
+            return true;
+          }
+        }
+        
+        return false;
+      };
+      
       while (aiAttempt < maxAiAttempts) {
         try {
           if (aiAttempt > 0) {
-            const waitTime = Math.min(2000 * Math.pow(2, aiAttempt - 1), 8000);
-            console.log("[Shoe Identification] Waiting", waitTime, "ms before retry...");
+            const waitTime = Math.min(3000 * Math.pow(2, aiAttempt), 12000);
+            console.log("[Shoe Identification] Waiting", waitTime, "ms before retry (attempt", aiAttempt + 1, ")...");
             await new Promise(resolve => setTimeout(resolve, waitTime));
           }
           
@@ -1038,24 +1068,14 @@ Return ONLY valid JSON:
             continue;
           }
           
-          const trimmedResponse = aiResponse.trim();
-          const lowerResponse = trimmedResponse.toLowerCase();
-          
-          if (lowerResponse.startsWith('rate') || 
-              lowerResponse.startsWith('resource') ||
-              lowerResponse.startsWith('error') ||
-              lowerResponse.includes('rate limit') ||
-              lowerResponse.includes('too many requests') ||
-              lowerResponse.includes('resource exhausted') ||
-              lowerResponse.includes('quota exceeded') ||
-              lowerResponse.includes('temporarily unavailable')) {
-            console.error("[Shoe Identification] Rate limit/error detected:", trimmedResponse.substring(0, 150));
+          if (isErrorResponse(aiResponse)) {
+            console.error("[Shoe Identification] Error response detected:", aiResponse.substring(0, 150));
             aiAttempt++;
             continue;
           }
           
-          if (!trimmedResponse.includes('{')) {
-            console.error("[Shoe Identification] Response does not contain JSON:", trimmedResponse.substring(0, 200));
+          if (!aiResponse.includes('{')) {
+            console.error("[Shoe Identification] Response does not contain JSON:", aiResponse.substring(0, 200));
             aiAttempt++;
             continue;
           }
@@ -1074,8 +1094,8 @@ Return ONLY valid JSON:
         }
       }
       
-      if (!aiResponse || !aiResponse.trim().includes('{')) {
-        throw new Error("AI service is busy. Please wait a moment and try again, or enter details manually.");
+      if (!aiResponse || !aiResponse.includes('{') || isErrorResponse(aiResponse)) {
+        throw new Error("AI service is temporarily busy. Please wait 30 seconds and try again, or enter details manually.");
       }
 
       console.log("[Shoe Identification] AI Response type:", typeof aiResponse);
@@ -1102,32 +1122,43 @@ Return ONLY valid JSON:
 
       let result;
       try {
-        let jsonString = jsonMatch[0];
+        let cleanJsonString = jsonMatch[0];
         
-        if (jsonString.startsWith('object')) {
-          jsonString = jsonString.substring(6).trim();
+        cleanJsonString = cleanJsonString.replace(/^[^{]*/, '');
+        
+        if (cleanJsonString.startsWith('object')) {
+          cleanJsonString = cleanJsonString.substring(6).trim();
         }
         
-        if (!jsonString.startsWith('{')) {
-          const firstBrace = jsonString.indexOf('{');
-          if (firstBrace !== -1) {
-            jsonString = jsonString.substring(firstBrace);
-          }
+        const firstBrace = cleanJsonString.indexOf('{');
+        if (firstBrace > 0) {
+          cleanJsonString = cleanJsonString.substring(firstBrace);
         }
         
-        if (!jsonString.endsWith('}')) {
-          const lastBrace = jsonString.lastIndexOf('}');
-          if (lastBrace !== -1) {
-            jsonString = jsonString.substring(0, lastBrace + 1);
-          }
+        const lastBrace = cleanJsonString.lastIndexOf('}');
+        if (lastBrace !== -1 && lastBrace < cleanJsonString.length - 1) {
+          cleanJsonString = cleanJsonString.substring(0, lastBrace + 1);
         }
         
-        console.log("[Shoe Identification] Attempting to parse JSON:", jsonString.substring(0, 300));
-        result = JSON.parse(jsonString);
+        cleanJsonString = cleanJsonString
+          .replace(/[\x00-\x1F\x7F]/g, ' ')
+          .replace(/,\s*}/g, '}')
+          .replace(/,\s*]/g, ']');
+        
+        console.log("[Shoe Identification] Attempting to parse JSON:", cleanJsonString.substring(0, 300));
+        result = JSON.parse(cleanJsonString);
         console.log("[Shoe Identification] Successfully parsed result:", JSON.stringify(result).substring(0, 300));
       } catch (parseError) {
         console.error("[Shoe Identification] JSON parse error:", parseError);
         console.error("[Shoe Identification] Failed to parse:", jsonMatch[0].substring(0, 300));
+        
+        if (retryCount < 2) {
+          console.log("[Shoe Identification] JSON parse failed, will retry...");
+          setIsIdentifyingShoe(false);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return await identifyShoeFromPhoto(retryCount + 1);
+        }
+        
         throw new Error("Failed to process AI response. Please try again or enter details manually.");
       }
 
