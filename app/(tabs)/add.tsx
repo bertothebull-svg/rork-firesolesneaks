@@ -537,17 +537,35 @@ Return ONLY the JSON object.`;
         try {
           let jsonString = jsonMatch[0].trim();
           
-          if (jsonString.startsWith('object')) {
-            jsonString = jsonString.substring(6).trim();
+          console.log("[Sneaker Search] Raw JSON match:", jsonString.substring(0, 100));
+          
+          // Aggressively strip any text before the first {
+          const firstBraceIdx = jsonString.indexOf('{');
+          if (firstBraceIdx > 0) {
+            console.log("[Sneaker Search] Stripping", firstBraceIdx, "chars before first brace");
+            jsonString = jsonString.substring(firstBraceIdx);
           }
           
-          if (!jsonString.startsWith('{')) {
-            const firstBrace = jsonString.indexOf('{');
-            if (firstBrace !== -1) {
-              jsonString = jsonString.substring(firstBrace);
+          // Strip common prefixes that AI might add
+          const prefixesToStrip = ['object', 'Object', 'json', 'JSON', 'response', 'Response', 'output', 'Output', 'result', 'Result'];
+          for (const prefix of prefixesToStrip) {
+            if (jsonString.toLowerCase().startsWith(prefix.toLowerCase())) {
+              jsonString = jsonString.substring(prefix.length).trim();
+              console.log("[Sneaker Search] Stripped prefix:", prefix);
             }
           }
           
+          // Ensure we start with {
+          if (!jsonString.startsWith('{')) {
+            const braceIndex = jsonString.indexOf('{');
+            if (braceIndex !== -1) {
+              jsonString = jsonString.substring(braceIndex);
+            } else {
+              throw new Error("No valid JSON object found");
+            }
+          }
+          
+          // Find the last matching brace
           if (!jsonString.endsWith('}')) {
             const lastBrace = jsonString.lastIndexOf('}');
             if (lastBrace !== -1) {
@@ -555,7 +573,19 @@ Return ONLY the JSON object.`;
             }
           }
           
-          console.log("[Sneaker Search] Attempting to parse:", jsonString.substring(0, 200));
+          // Clean control characters and fix common JSON issues
+          jsonString = jsonString
+            .replace(/[\x00-\x1F\x7F]/g, ' ')
+            .replace(/,\s*}/g, '}')
+            .replace(/,\s*]/g, ']');
+          
+          console.log("[Sneaker Search] Cleaned JSON (first 200 chars):", jsonString.substring(0, 200));
+          
+          // Final validation
+          if (!jsonString.startsWith('{') || !jsonString.endsWith('}')) {
+            throw new Error("Invalid JSON structure after cleaning");
+          }
+          
           const data = JSON.parse(jsonString);
           console.log("[Sneaker Search] Parsed JSON:", data);
           return data;
@@ -1146,17 +1176,35 @@ Return ONLY valid JSON:
       try {
         let cleanJsonString = jsonMatch[0];
         
-        cleanJsonString = cleanJsonString.replace(/^[^{]*/, '');
+        console.log("[Shoe Identification] Raw JSON match:", cleanJsonString.substring(0, 100));
         
-        if (cleanJsonString.startsWith('object')) {
-          cleanJsonString = cleanJsonString.substring(6).trim();
+        // Aggressively strip any text before the first {
+        const firstBraceIdx = cleanJsonString.indexOf('{');
+        if (firstBraceIdx > 0) {
+          console.log("[Shoe Identification] Stripping", firstBraceIdx, "chars before first brace");
+          cleanJsonString = cleanJsonString.substring(firstBraceIdx);
         }
         
-        const firstBrace = cleanJsonString.indexOf('{');
-        if (firstBrace > 0) {
-          cleanJsonString = cleanJsonString.substring(firstBrace);
+        // Strip common prefixes that AI might add
+        const prefixesToStrip = ['object', 'Object', 'json', 'JSON', 'response', 'Response', 'output', 'Output', 'result', 'Result'];
+        for (const prefix of prefixesToStrip) {
+          if (cleanJsonString.toLowerCase().startsWith(prefix.toLowerCase())) {
+            cleanJsonString = cleanJsonString.substring(prefix.length).trim();
+            console.log("[Shoe Identification] Stripped prefix:", prefix);
+          }
         }
         
+        // Ensure we start with {
+        if (!cleanJsonString.startsWith('{')) {
+          const braceIndex = cleanJsonString.indexOf('{');
+          if (braceIndex !== -1) {
+            cleanJsonString = cleanJsonString.substring(braceIndex);
+          } else {
+            throw new Error("No valid JSON object found in response");
+          }
+        }
+        
+        // Find the last matching brace
         const lastBrace = cleanJsonString.lastIndexOf('}');
         if (lastBrace !== -1 && lastBrace < cleanJsonString.length - 1) {
           cleanJsonString = cleanJsonString.substring(0, lastBrace + 1);
@@ -1200,10 +1248,17 @@ Return ONLY valid JSON:
           .replace(/[\x00-\x1F\x7F]/g, ' ')
           .replace(/,\s*}/g, '}')
           .replace(/,\s*]/g, ']')
-          .replace(/"[^"]*$/g, '""') // Fix any remaining unclosed strings at the end
-          .replace(/,\s*""\s*}/g, '}'); // Clean up empty strings before closing brace
+          .replace(/"[^"]*$/g, '""')
+          .replace(/,\s*""\s*}/g, '}');
         
-        console.log("[Shoe Identification] Attempting to parse JSON:", cleanJsonString.substring(0, 300));
+        console.log("[Shoe Identification] Cleaned JSON (first 300 chars):", cleanJsonString.substring(0, 300));
+        
+        // Final validation - must start with { and end with }
+        if (!cleanJsonString.startsWith('{') || !cleanJsonString.endsWith('}')) {
+          console.error("[Shoe Identification] Invalid JSON structure after cleaning");
+          throw new Error("Invalid JSON structure");
+        }
+        
         result = JSON.parse(cleanJsonString);
         console.log("[Shoe Identification] Successfully parsed result:", JSON.stringify(result).substring(0, 300));
       } catch (parseError) {
