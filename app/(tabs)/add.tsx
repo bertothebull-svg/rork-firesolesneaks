@@ -1977,7 +1977,7 @@ Return ONLY valid JSON:
         isSubmitting={isAddingFeedback}
       />
 
-      {alternativeShoes.length > 0 && (
+      {category === "sneaker" && alternativeShoes.length > 0 && (
         <TouchableOpacity 
           style={styles.showAlternativesButton}
           onPress={() => setShowAlternatives(true)}
@@ -1986,7 +1986,7 @@ Return ONLY valid JSON:
         </TouchableOpacity>
       )}
 
-      {showAlternatives && alternativeShoes.length > 0 && (
+      {category === "sneaker" && showAlternatives && alternativeShoes.length > 0 && (
         <View style={styles.alternativesOverlay}>
           <View style={styles.alternativesModal}>
             <View style={styles.alternativesHeader}>
