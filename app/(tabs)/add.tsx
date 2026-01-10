@@ -481,6 +481,14 @@ Return ONLY the JSON object.`;
       if (!response || response.trim().length === 0) {
         throw new Error("No response from AI after " + maxAttempts + " attempts");
       }
+      
+      const trimmedResp = response.trim();
+      if (trimmedResp.toLowerCase().startsWith('rate') || 
+          trimmedResp.toLowerCase().includes('rate limit') ||
+          trimmedResp.toLowerCase().includes('too many requests')) {
+        console.error("[Sneaker Search] Rate limit detected:", trimmedResp.substring(0, 100));
+        throw new Error("AI service is busy. Please wait a moment and try again.");
+      }
 
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -983,6 +991,25 @@ Return ONLY valid JSON:
         });
         
         console.log("[Shoe Identification] AI response received in", Date.now() - startTime, "ms");
+        
+        if (!aiResponse || typeof aiResponse !== 'string') {
+          console.error("[Shoe Identification] Empty or invalid response from AI");
+          throw new Error("No response from AI service");
+        }
+        
+        const trimmedResponse = aiResponse.trim();
+        if (trimmedResponse.toLowerCase().startsWith('rate') || 
+            trimmedResponse.toLowerCase().includes('rate limit') ||
+            trimmedResponse.toLowerCase().includes('too many requests')) {
+          console.error("[Shoe Identification] Rate limit detected:", trimmedResponse.substring(0, 100));
+          throw new Error("AI service is busy. Please wait a moment and try again.");
+        }
+        
+        if (!trimmedResponse.includes('{')) {
+          console.error("[Shoe Identification] Response does not contain JSON:", trimmedResponse.substring(0, 200));
+          throw new Error("Unexpected response from AI. Please try again.");
+        }
+        
       } catch (aiError) {
         console.error("[Shoe Identification] generateText error:", aiError);
         if (aiError instanceof Error) {
@@ -991,6 +1018,10 @@ Return ONLY valid JSON:
             message: aiError.message,
             stack: aiError.stack?.substring(0, 300)
           });
+          
+          if (aiError.message.includes('busy') || aiError.message.includes('wait')) {
+            throw aiError;
+          }
         }
         throw new Error("AI service is temporarily unavailable. Please try again in a moment or enter details manually.");
       }
@@ -998,11 +1029,6 @@ Return ONLY valid JSON:
       console.log("[Shoe Identification] AI Response type:", typeof aiResponse);
       console.log("[Shoe Identification] AI Response length:", aiResponse?.length || 0);
       console.log("[Shoe Identification] AI Response preview:", aiResponse?.substring(0, 200));
-
-      if (!aiResponse || typeof aiResponse !== 'string') {
-        console.error("[Shoe Identification] Invalid AI response type:", typeof aiResponse);
-        throw new Error("Invalid response from AI service. Please try again.");
-      }
 
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
