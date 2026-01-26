@@ -1457,7 +1457,36 @@ Return ONLY valid JSON:
     }
   };
 
-  const handleSave = () => {
+  const convertToBase64 = async (uri: string): Promise<string> => {
+    if (uri.startsWith('data:')) {
+      return uri;
+    }
+    
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      return uri;
+    }
+    
+    try {
+      console.log('[Image Persistence] Converting to base64:', uri.substring(0, 50));
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64 = reader.result as string;
+          console.log('[Image Persistence] Converted successfully, length:', base64.length);
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error('[Image Persistence] Failed to convert:', error);
+      return uri;
+    }
+  };
+
+  const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert("Required Field", "Please enter an item name");
       return;
@@ -1466,6 +1495,23 @@ Return ONLY valid JSON:
     if (imageUris.length === 0) {
       Alert.alert("Required Field", "Please add at least one image");
       return;
+    }
+
+    let persistedImageUrl = imageUris[0];
+    
+    if (imageUris[0].startsWith('file://') || 
+        (imageUris[0].startsWith('/') && !imageUris[0].startsWith('//'))) {
+      try {
+        console.log('[Image Persistence] Converting temporary file to permanent base64...');
+        persistedImageUrl = await convertToBase64(imageUris[0]);
+      } catch (error) {
+        console.error('[Image Persistence] Error converting image:', error);
+        Alert.alert(
+          "Image Error", 
+          "Failed to save image permanently. Please try taking a new photo."
+        );
+        return;
+      }
     }
 
     const allColors = [...new Set([...mainColors, ...accentColors])];
@@ -1478,7 +1524,7 @@ Return ONLY valid JSON:
       silhouette: silhouette.trim() || undefined,
       style: style.trim() || undefined,
       commonName: commonName.trim() || undefined,
-      imageUrl: imageUris[0],
+      imageUrl: persistedImageUrl,
       colors: allColors.length > 0 ? allColors : (colors.length > 0 ? colors : []),
       mainColors: mainColors.length > 0 ? mainColors : undefined,
       accentColors: accentColors.length > 0 ? accentColors : undefined,
