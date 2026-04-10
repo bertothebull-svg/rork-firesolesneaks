@@ -10,9 +10,8 @@ import {
 } from "react-native";
 import { Stack } from "expo-router";
 import { Download, Upload, Trash2, Info, Palette } from "lucide-react-native";
-import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
-import { File, Paths } from "expo-file-system";
+import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useWardrobe, useWardrobeStats } from "../../contexts/WardrobeContext";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
@@ -55,18 +54,20 @@ export default function SettingsScreen() {
         Alert.alert("Success", "Wardrobe exported successfully!");
       } else {
         const fileName = `wardrobe-backup-${Date.now()}.json`;
-        const file = new File(Paths.cache, fileName);
+        const fileUri = FileSystem.cacheDirectory + fileName;
         
-        file.create({ overwrite: true });
-        file.write(jsonString);
+        await FileSystem.writeAsStringAsync(fileUri, jsonString, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
         
-        console.log("[Export] File created at:", file.uri);
+        console.log("[Export] File created at:", fileUri);
 
+        const Sharing = await import("expo-sharing");
         const isAvailable = await Sharing.isAvailableAsync();
         console.log("[Export] Sharing available:", isAvailable);
 
         if (isAvailable) {
-          await Sharing.shareAsync(file.uri, {
+          await Sharing.shareAsync(fileUri, {
             mimeType: "application/json",
             dialogTitle: "Export Wardrobe Backup",
           });
@@ -132,11 +133,11 @@ export default function SettingsScreen() {
         
         let content: string;
         try {
-          const file = new File(asset.uri);
-          const rawContent = await file.text();
+          const rawContent = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.UTF8,
+          });
           
           console.log("[Import] Raw content type:", typeof rawContent);
-          console.log("[Import] Raw content:", rawContent);
           
           if (typeof rawContent === 'object' && rawContent !== null) {
             content = JSON.stringify(rawContent);

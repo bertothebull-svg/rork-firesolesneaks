@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Package, Plus, Sparkles, Heart, Settings } from "lucide-react-native";
+import { Package, Plus, Sparkles, Heart, Settings, Calendar } from "lucide-react-native";
 import React from "react";
 
 import { COLORS } from "../../constants/styles";
@@ -49,6 +49,13 @@ export default function TabLayout() {
         options={{
           title: "Outfits",
           tabBarIcon: ({ color, size }) => <Heart size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: "Calendar",
+          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
         }}
       />
       <Tabs.Screen

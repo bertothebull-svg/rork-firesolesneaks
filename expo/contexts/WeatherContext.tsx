@@ -1,7 +1,7 @@
-import * as Location from "expo-location";
 import createContextHook from "@nkzw/create-context-hook";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Platform } from "react-native";
 import type { Season } from "../types/wardrobe";
 
 interface WeatherData {
@@ -14,6 +14,33 @@ export const [WeatherProvider, useWeather] = createContextHook(() => {
   const locationQuery = useQuery({
     queryKey: ["location"],
     queryFn: async () => {
+      if (Platform.OS === "web") {
+        console.log("[Location] Using web geolocation API...");
+        return new Promise<{ coords: { latitude: number; longitude: number } }>((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error("Geolocation not supported on this browser"));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              console.log("[Location] Web location:", position.coords.latitude, position.coords.longitude);
+              resolve({
+                coords: {
+                  latitude: position.coords.latitude,
+                  longitude: position.coords.longitude,
+                },
+              });
+            },
+            (error) => {
+              console.error("[Location] Web geolocation error:", error.message);
+              reject(new Error("Location permission denied"));
+            },
+            { timeout: 10000, enableHighAccuracy: false }
+          );
+        });
+      }
+
+      const Location = await import("expo-location");
       console.log("[Location] Requesting permission...");
       const { status } = await Location.requestForegroundPermissionsAsync();
       
@@ -66,14 +93,27 @@ export const [WeatherProvider, useWeather] = createContextHook(() => {
         throw new Error("Invalid weather data structure");
       }
       
-      const reverseGeocode = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-      
-      const locationName = reverseGeocode[0]
-        ? `${reverseGeocode[0].city || reverseGeocode[0].region || "Unknown"}`
-        : "Unknown";
+      let locationName = "Unknown";
+      try {
+        if (Platform.OS !== "web") {
+          const Location = await import("expo-location");
+          const reverseGeocode = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude,
+          });
+          locationName = reverseGeocode[0]
+            ? `${reverseGeocode[0].city || reverseGeocode[0].region || "Unknown"}`
+            : "Unknown";
+        } else {
+          const geoResponse = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&timezone=auto`
+          );
+          const geoData = await geoResponse.json();
+          locationName = geoData.timezone?.split('/').pop()?.replace(/_/g, ' ') || "Unknown";
+        }
+      } catch (geoError) {
+        console.error("[Weather] Reverse geocode error:", geoError);
+      }
 
       const weatherCode = data.current.weather_code;
       const condition = getWeatherCondition(weatherCode);
