@@ -23,7 +23,8 @@ import RatingModal from "../../components/RatingModal";
 import type { FeedbackEntry } from "../../types/feedback";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
 import type { ItemCategory, WardrobeItem, Season, TopSubtype, BottomSubtype, OutfitStyle } from "../../types/wardrobe";
-import { safeGenerateText, convertImageToBase64 } from "../../utils/ai";
+import { safeGenerateText, convertImageToBase64, generateObject } from "../../utils/ai";
+import { z } from "zod";
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -513,7 +514,31 @@ IMPORTANT:
 
 CRITICAL: Return ONLY a raw JSON object. Do not include markdown formatting like \`\`\`json. Do not include any conversational text before or after the JSON. Start your response with { and end with }.`;
 
-      let response;
+      const sneakerSearchSchema = z.object({
+        brand: z.string().describe("Official brand name"),
+        model: z.string().describe("Complete official product name as listed on GOAT/StockX"),
+        colorway: z.string().describe("Official colorway name"),
+        silhouette: z.string().describe("Base model family"),
+        style: z.string().optional().describe("Nickname or popular name"),
+        styleCode: z.string().optional().describe("Official SKU/Style Code"),
+        imageSearchQuery: z.string().describe("Most specific search query: Brand + Full Model + Colorway + SKU"),
+        retailPrice: z.string().optional().describe("Original retail price USD number only"),
+        marketValue: z.string().optional().describe("Current average resale price USD number only"),
+        confidence: z.string().describe("high, medium, or low"),
+        alternatives: z.array(z.object({
+          brand: z.string(),
+          model: z.string(),
+          colorway: z.string(),
+          silhouette: z.string().optional(),
+          style: z.string().optional(),
+          styleCode: z.string().optional(),
+          retailPrice: z.string().optional(),
+          marketValue: z.string().optional(),
+          confidence: z.string().optional(),
+          searchQuery: z.string().optional(),
+        })).optional().describe("3-5 alternative matches"),
+      });
+
       let attempt = 0;
       const maxAttempts = 3;
       
@@ -524,147 +549,26 @@ CRITICAL: Return ONLY a raw JSON object. Do not include markdown formatting like
             console.log("[Sneaker Search] Waiting", waitTime, "ms before retry...");
             await new Promise(resolve => setTimeout(resolve, waitTime));
           }
-          
-          response = await safeGenerateText({ messages: [{ role: "user", content: searchPrompt }] });
-          console.log("[Sneaker Search] AI Response (Attempt " + (attempt + 1) + "):", typeof response, response?.substring?.(0, 200));
-          
-          if (!response || typeof response !== 'string' || response.trim().length === 0) {
-            console.error("[Sneaker Search] Empty or invalid response");
-            attempt++;
-            continue;
-          }
-          
-          const trimmedResp = response.trim();
-          const lowerResp = trimmedResp.toLowerCase();
-          
-          if (lowerResp.startsWith('rate') || 
-              lowerResp.startsWith('resource') ||
-              lowerResp.startsWith('error') ||
-              lowerResp.includes('rate limit') ||
-              lowerResp.includes('too many requests') ||
-              lowerResp.includes('resource exhausted') ||
-              lowerResp.includes('quota exceeded')) {
-            console.error("[Sneaker Search] Rate limit/error detected:", trimmedResp.substring(0, 150));
-            attempt++;
-            continue;
-          }
-          
-          if (!trimmedResp.includes('{')) {
-            console.error("[Sneaker Search] Response doesn't contain JSON:", trimmedResp.substring(0, 150));
-            attempt++;
-            continue;
-          }
-          
-          break;
+
+          console.log("[Sneaker Search] Calling generateObject (Attempt", attempt + 1, ")");
+          const data = await generateObject({
+            messages: [{ role: "user" as const, content: searchPrompt }],
+            schema: sneakerSearchSchema,
+          });
+
+          console.log("[Sneaker Search] Parsed result:", JSON.stringify(data).substring(0, 300));
+          return data;
         } catch (err) {
           console.error("[Sneaker Search] Attempt", attempt + 1, "failed:", err);
-          if (attempt === maxAttempts - 1) {
+          attempt++;
+          if (attempt === maxAttempts) {
             throw new Error("AI service is temporarily unavailable. Please try again in a moment.");
           }
         }
-        attempt++;
-      }
-      
-      if (!response || response.trim().length === 0) {
-        throw new Error("AI service is busy. Please wait a moment and try again.");
-      }
-      
-      const trimmedResp = response.trim();
-      if (!trimmedResp.includes('{')) {
-        console.error("[Sneaker Search] Final response has no JSON:", trimmedResp.substring(0, 150));
-        throw new Error("AI service returned an unexpected response. Please try again.");
       }
 
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          let jsonString = jsonMatch[0].trim();
-          
-          console.log("[Sneaker Search] Raw JSON match:", jsonString.substring(0, 100));
-          
-          // Aggressively strip any text before the first {
-          const firstBraceIdx = jsonString.indexOf('{');
-          if (firstBraceIdx > 0) {
-            console.log("[Sneaker Search] Stripping", firstBraceIdx, "chars before first brace");
-            jsonString = jsonString.substring(firstBraceIdx);
-          }
-          
-          // Strip common prefixes that AI might add
-          const prefixesToStrip = ['object', 'Object', 'json', 'JSON', 'response', 'Response', 'output', 'Output', 'result', 'Result'];
-          for (const prefix of prefixesToStrip) {
-            if (jsonString.toLowerCase().startsWith(prefix.toLowerCase())) {
-              jsonString = jsonString.substring(prefix.length).trim();
-              console.log("[Sneaker Search] Stripped prefix:", prefix);
-            }
-          }
-          
-          // Ensure we start with {
-          if (!jsonString.startsWith('{')) {
-            const braceIndex = jsonString.indexOf('{');
-            if (braceIndex !== -1) {
-              jsonString = jsonString.substring(braceIndex);
-            } else {
-              throw new Error("No valid JSON object found");
-            }
-          }
-          
-          // Find the last matching brace
-          if (!jsonString.endsWith('}')) {
-            const lastBrace = jsonString.lastIndexOf('}');
-            if (lastBrace !== -1) {
-              jsonString = jsonString.substring(0, lastBrace + 1);
-            }
-          }
-          
-          // Clean control characters and fix common JSON issues
-          jsonString = jsonString
-            .replace(/[\x00-\x1F\x7F]/g, ' ')
-            .replace(/,\s*}/g, '}')
-            .replace(/,\s*]/g, ']');
-          
-          console.log("[Sneaker Search] Cleaned JSON (first 200 chars):", jsonString.substring(0, 200));
-          
-          // Final validation
-          if (!jsonString.startsWith('{') || !jsonString.endsWith('}')) {
-            throw new Error("Invalid JSON structure after cleaning");
-          }
-          
-          const data = JSON.parse(jsonString);
-          console.log("[Sneaker Search] Parsed JSON:", data);
-          return data;
-        } catch (e) {
-          console.error("[Sneaker Search] JSON parse error:", e);
-          console.error("[Sneaker Search] Attempted to parse:", jsonMatch[0].substring(0, 200));
-        }
-      }
-      
-      console.log("[Sneaker Search] No valid JSON found, using regex extraction");
+      throw new Error("AI service is busy. Please wait a moment and try again.");
 
-      const brandMatch = response.match(/(?:brand|Brand)[":\s]*([^\n,}"]+)/i);
-      const modelMatch = response.match(/(?:model|Model)[":\s]*([^\n,}"]+)/i);
-      const colorMatch = response.match(/(?:colorway|color|Colorway|Color)[":\s]*([^\n,}"]+)/i);
-      const retailMatch = response.match(/(?:retailPrice|retail_price|RetailPrice)[":\s]*(\d+)/i);
-      const marketMatch = response.match(/(?:marketValue|market_value|MarketValue)[":\s]*(\d+)/i);
-
-      const silhouetteMatch = response.match(/(?:silhouette|Silhouette)[":\s]*([^\n,}"]+)/i);
-      const styleMatch = response.match(/(?:style|Style)[":\s]*([^\n,}"]+)/i);
-      const styleCodeMatch = response.match(/(?:styleCode|style_code|StyleCode|sku|SKU)[":\s]*([^\n,}"]+)/i);
-      const confidenceMatch = response.match(/(?:confidence|Confidence)[":\s]*([^\n,}"]+)/i);
-
-      const imageSearchMatch = response.match(/(?:imageSearchQuery|image_search_query)[": ]*([^\n,}"]+)/i);
-
-      return {
-        brand: brandMatch?.[1]?.trim() || "",
-        model: modelMatch?.[1]?.trim() || sneakerName,
-        colorway: colorMatch?.[1]?.trim() || "",
-        silhouette: silhouetteMatch?.[1]?.trim() || "",
-        style: styleMatch?.[1]?.trim() || "",
-        styleCode: styleCodeMatch?.[1]?.trim() || "",
-        imageSearchQuery: imageSearchMatch?.[1]?.trim() || `${brandMatch?.[1]?.trim() || ""} ${modelMatch?.[1]?.trim() || sneakerName}`.trim(),
-        retailPrice: retailMatch?.[1] || "",
-        marketValue: marketMatch?.[1] || "",
-        confidence: confidenceMatch?.[1]?.trim() || "medium",
-      };
     },
   });
 
@@ -1066,49 +970,43 @@ CRITICAL: Return ONLY a raw JSON object. No markdown formatting like \`\`\`json.
   ]
 }`;
 
-      let aiResponse: string | undefined;
+      const shoeIdentificationSchema = z.object({
+        brand: z.string().describe("Official brand name (Nike, Air Jordan, Adidas, New Balance, etc.)"),
+        model: z.string().describe("Complete official model name as listed on GOAT/StockX"),
+        silhouette: z.string().describe("Base silhouette (Air Jordan 1 High, Dunk Low, etc.)"),
+        colorway: z.string().describe("EXACT official colorway name from GOAT/StockX"),
+        extractedColors: z.string().optional().describe("Detailed color description per area"),
+        styleCode: z.string().optional().describe("Official SKU/Style Code if visible"),
+        colors: z.array(z.string()).describe("All distinct colors seen on shoe"),
+        mainColors: z.array(z.string()).optional().describe("2-3 most dominant colors"),
+        accentColors: z.array(z.string()).optional().describe("Secondary/accent colors"),
+        retailPrice: z.string().optional().describe("Original retail price USD number only"),
+        marketValue: z.string().optional().describe("Current market value USD number only"),
+        confidence: z.enum(["high", "medium", "low"]).describe("Confidence level"),
+        confidenceReason: z.string().optional().describe("Explain why this confidence level"),
+        searchQuery: z.string().optional().describe("Brand + Full Model + Official Colorway + SKU for Google search"),
+        distinguishingFeatures: z.string().optional().describe("Key distinguishing features"),
+        style: z.string().optional().describe("Nickname or popular name"),
+        commonName: z.string().optional().describe("Common name"),
+        alternatives: z.array(z.object({
+          brand: z.string(),
+          model: z.string(),
+          colorway: z.string(),
+          silhouette: z.string().optional(),
+          style: z.string().optional(),
+          styleCode: z.string().optional(),
+          retailPrice: z.string().optional(),
+          marketValue: z.string().optional(),
+          confidence: z.string().optional(),
+          searchQuery: z.string().optional(),
+          reason: z.string().optional(),
+        })).optional().describe("3-5 alternative possible matches"),
+      });
+
+      let result: z.infer<typeof shoeIdentificationSchema> | null = null;
       let aiAttempt = 0;
       const maxAiAttempts = 3;
-      
-      const isErrorResponse = (text: string): boolean => {
-        if (!text || typeof text !== 'string') return true;
-        const trimmed = text.trim();
-        const lower = trimmed.toLowerCase();
-        
-        // Check if response contains JSON (could be wrapped in markdown code blocks)
-        const hasJsonContent = trimmed.includes('{') && trimmed.includes('}');
-        const startsWithCodeBlock = trimmed.startsWith('```');
-        const startsWithJson = trimmed.charAt(0) === '{' || trimmed.charAt(0) === '[';
-        
-        if (!hasJsonContent && !startsWithCodeBlock && !startsWithJson) {
-          console.log("[Shoe Identification] Response doesn't contain JSON");
-          console.log("[Shoe Identification] Response preview:", trimmed.substring(0, 150));
-          return true;
-        }
-        
-        const errorPatterns = [
-          'rate limit', 'rate_limit', 'ratelimit',
-          'resource exhausted', 'resource_exhausted',
-          'too many requests', 'quota exceeded',
-          'temporarily unavailable', 'service unavailable',
-          'internal error', 'server error',
-          'api error', 'request failed',
-          'throttl', 'blocked'
-        ];
-        
-        // Only check for error patterns if it doesn't look like valid JSON
-        if (!hasJsonContent) {
-          for (const pattern of errorPatterns) {
-            if (lower.includes(pattern)) {
-              console.log("[Shoe Identification] Error pattern detected:", pattern);
-              return true;
-            }
-          }
-        }
-        
-        return false;
-      };
-      
+
       while (aiAttempt < maxAiAttempts) {
         try {
           if (aiAttempt > 0) {
@@ -1116,206 +1014,70 @@ CRITICAL: Return ONLY a raw JSON object. No markdown formatting like \`\`\`json.
             console.log("[Shoe Identification] Waiting", waitTime, "ms before retry (attempt", aiAttempt + 1, ")...");
             await new Promise(resolve => setTimeout(resolve, waitTime));
           }
-          
+
           console.log("[Shoe Identification] Building AI request with", base64Images.length, "images (attempt", aiAttempt + 1, ")");
           const contentArray: ({ type: "text"; text: string } | { type: "image"; image: string })[] = [
             { type: "text", text: prompt }
           ];
-          
+
           for (const base64Image of base64Images) {
             contentArray.push({ type: "image", image: base64Image });
           }
-          
-          console.log("[Shoe Identification] Sending request to AI vision model...");
+
+          console.log("[Shoe Identification] Sending request to AI with generateObject...");
           const startTime = Date.now();
-          
-          aiResponse = await safeGenerateText({
+
+          result = await generateObject({
             messages: [
               {
                 role: "user",
                 content: contentArray
               }
-            ]
+            ],
+            schema: shoeIdentificationSchema,
           });
-          
+
           console.log("[Shoe Identification] AI response received in", Date.now() - startTime, "ms");
-          console.log("[Shoe Identification] Raw response type:", typeof aiResponse);
-          console.log("[Shoe Identification] Raw response preview:", String(aiResponse).substring(0, 300));
-          
-          if (!aiResponse || typeof aiResponse !== 'string' || aiResponse.trim().length === 0) {
-            console.error("[Shoe Identification] Empty or invalid response from AI");
-            aiAttempt++;
-            continue;
+          console.log("[Shoe Identification] Parsed result:", JSON.stringify(result).substring(0, 300));
+
+          if (result && result.brand) {
+            break;
           }
-          
-          if (isErrorResponse(aiResponse)) {
-            console.error("[Shoe Identification] Error response detected:", aiResponse.substring(0, 150));
-            aiAttempt++;
-            continue;
-          }
-          
-          if (!aiResponse.includes('{')) {
-            console.error("[Shoe Identification] Response does not contain JSON:", aiResponse.substring(0, 200));
-            aiAttempt++;
-            continue;
-          }
-          
-          break;
-          
+
+          console.error("[Shoe Identification] Empty or invalid result from AI");
+          aiAttempt++;
         } catch (aiError) {
-          console.error("[Shoe Identification] generateText error (attempt", aiAttempt + 1, "):", aiError);
+          console.error("[Shoe Identification] generateObject error (attempt", aiAttempt + 1, "):", aiError);
           if (aiError instanceof Error) {
-            console.error("[Shoe Identification] Error details:", {
-              name: aiError.name,
-              message: aiError.message,
-            });
+            console.error("[Shoe Identification] Error details:", aiError.message);
           }
           aiAttempt++;
         }
       }
-      
-      if (!aiResponse || !aiResponse.includes('{')) {
-        throw new Error("AI service is temporarily busy. Please wait 30 seconds and try again, or enter details manually.");
-      }
 
-      console.log("[Shoe Identification] AI Response type:", typeof aiResponse);
-      console.log("[Shoe Identification] AI Response length:", aiResponse?.length || 0);
-      console.log("[Shoe Identification] AI Response preview:", aiResponse?.substring(0, 200));
-
-      if (!aiResponse) {
-        throw new Error("No response received from AI. Please try again.");
-      }
-      
-      let jsonString = aiResponse;
-      
-      const codeBlockMatch = aiResponse.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (codeBlockMatch) {
-        jsonString = codeBlockMatch[1].trim();
-        console.log("[Shoe Identification] Extracted JSON from code block");
-      }
-      
-      const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.error("[Shoe Identification] No JSON found in response. Full response:", aiResponse.substring(0, 500));
-        throw new Error("Could not analyze the shoe. Please try again or enter details manually.");
-      }
-
-      let result;
-      try {
-        let cleanJsonString = jsonMatch[0];
-        
-        console.log("[Shoe Identification] Raw JSON match:", cleanJsonString.substring(0, 100));
-        
-        // Aggressively strip any text before the first {
-        const firstBraceIdx = cleanJsonString.indexOf('{');
-        if (firstBraceIdx > 0) {
-          console.log("[Shoe Identification] Stripping", firstBraceIdx, "chars before first brace");
-          cleanJsonString = cleanJsonString.substring(firstBraceIdx);
-        }
-        
-        // Strip common prefixes that AI might add
-        const prefixesToStrip = ['object', 'Object', 'json', 'JSON', 'response', 'Response', 'output', 'Output', 'result', 'Result'];
-        for (const prefix of prefixesToStrip) {
-          if (cleanJsonString.toLowerCase().startsWith(prefix.toLowerCase())) {
-            cleanJsonString = cleanJsonString.substring(prefix.length).trim();
-            console.log("[Shoe Identification] Stripped prefix:", prefix);
-          }
-        }
-        
-        // Ensure we start with {
-        if (!cleanJsonString.startsWith('{')) {
-          const braceIndex = cleanJsonString.indexOf('{');
-          if (braceIndex !== -1) {
-            cleanJsonString = cleanJsonString.substring(braceIndex);
-          } else {
-            throw new Error("No valid JSON object found in response");
-          }
-        }
-        
-        // Find the last matching brace
-        const lastBrace = cleanJsonString.lastIndexOf('}');
-        if (lastBrace !== -1 && lastBrace < cleanJsonString.length - 1) {
-          cleanJsonString = cleanJsonString.substring(0, lastBrace + 1);
-        }
-        
-        // Fix truncated JSON - ensure all strings and objects are properly closed
-        let openBraces = 0;
-        let openBrackets = 0;
-        let inString = false;
-        let lastChar = '';
-        
-        for (let i = 0; i < cleanJsonString.length; i++) {
-          const char = cleanJsonString[i];
-          if (char === '"' && lastChar !== '\\') {
-            inString = !inString;
-          } else if (!inString) {
-            if (char === '{') openBraces++;
-            else if (char === '}') openBraces--;
-            else if (char === '[') openBrackets++;
-            else if (char === ']') openBrackets--;
-          }
-          lastChar = char;
-        }
-        
-        // If string is unclosed, close it
-        if (inString) {
-          cleanJsonString += '"';
-        }
-        
-        // Close any unclosed brackets/braces
-        while (openBrackets > 0) {
-          cleanJsonString += ']';
-          openBrackets--;
-        }
-        while (openBraces > 0) {
-          cleanJsonString += '}';
-          openBraces--;
-        }
-        
-        cleanJsonString = cleanJsonString
-          .replace(/[\x00-\x1F\x7F]/g, ' ')
-          .replace(/,\s*}/g, '}')
-          .replace(/,\s*]/g, ']')
-          .replace(/"[^"]*$/g, '""')
-          .replace(/,\s*""\s*}/g, '}');
-        
-        console.log("[Shoe Identification] Cleaned JSON (first 300 chars):", cleanJsonString.substring(0, 300));
-        
-        // Final validation - must start with { and end with }
-        if (!cleanJsonString.startsWith('{') || !cleanJsonString.endsWith('}')) {
-          console.error("[Shoe Identification] Invalid JSON structure after cleaning");
-          throw new Error("Invalid JSON structure");
-        }
-        
-        result = JSON.parse(cleanJsonString);
-        console.log("[Shoe Identification] Successfully parsed result:", JSON.stringify(result).substring(0, 300));
-      } catch (parseError) {
-        console.error("[Shoe Identification] JSON parse error:", parseError);
-        console.error("[Shoe Identification] Failed to parse:", jsonMatch[0].substring(0, 300));
-        
+      if (!result) {
         if (retryCount < 2) {
-          console.log("[Shoe Identification] JSON parse failed, will retry...");
+          console.log("[Shoe Identification] No result after attempts, retrying from top...");
           setIsIdentifyingShoe(false);
           await new Promise(resolve => setTimeout(resolve, 2000));
           return await identifyShoeFromPhoto(retryCount + 1);
         }
-        
-        throw new Error("Failed to process AI response. Please try again or enter details manually.");
+        throw new Error("AI service is temporarily busy. Please wait 30 seconds and try again, or enter details manually.");
       }
 
       const data = {
         brand: result.brand || "Unknown",
         silhouette: result.silhouette || result.model || "Unknown",
         style: result.style || result.colorway || "Unknown",
-        commonName: result.commonName || result.name || "Unknown",
-        model: result.model || result.name || "Unknown",
+        commonName: result.commonName || "Unknown",
+        model: result.model || "Unknown",
         colorway: result.colorway || "Unknown",
-        styleCode: result.styleCode || result.sku || "",
+        styleCode: result.styleCode || "",
         colors: Array.isArray(result.colors) ? result.colors : [],
         retailPrice: result.retailPrice?.toString() || "0",
-        marketValue: result.marketValue?.toString() || result.price?.toString() || "0",
+        marketValue: result.marketValue?.toString() || "0",
         confidence: result.confidence || "medium",
-        description: result.description || "",
+        description: "",
       };
       
       console.log("[Shoe Identification] Processed data:", JSON.stringify(data).substring(0, 300));

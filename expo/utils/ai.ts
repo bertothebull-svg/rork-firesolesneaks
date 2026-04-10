@@ -1,4 +1,4 @@
-import { generateText } from "@rork-ai/toolkit-sdk";
+import { generateText, generateObject } from "@rork-ai/toolkit-sdk";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
 
@@ -78,6 +78,8 @@ export async function convertImageToBase64(uri: string): Promise<string> {
     throw new Error("Failed to convert image to base64. Please try a different photo.");
   }
 }
+
+export { generateObject };
 
 export async function safeGenerateText(
   params: string | { messages: (UserMessage | AssistantMessage)[] },
