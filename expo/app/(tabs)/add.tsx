@@ -292,7 +292,7 @@ Return ONLY the shoe name, nothing else. No explanation.`;
         queries.push(`${styleCode} goat`);
       }
       
-      queries.push(searchQuery);
+      queries.push(`${searchQuery} sneaker`);
       queries.push(`${searchQuery} stockx`);
       queries.push(`${searchQuery} goat official product image`);
       
@@ -360,7 +360,7 @@ Return ONLY the shoe name, nothing else. No explanation.`;
   const sneakerSearchMutation = useMutation({
     mutationFn: async (sneakerName: string) => {
       console.log("[Sneaker Search] Starting REAL DATA search for:", sneakerName);
-      console.log("[Sneaker Search] NEW FLOW: Google first → Extract from REAL listings");
+      console.log("[Sneaker Search] NEW FLOW: Normalize query → Google → Extract from REAL listings");
       
       const feedbackContext = getImprovementContext("item_identification");
       console.log("[Sneaker Search] Using feedback context:", feedbackContext);
@@ -368,24 +368,72 @@ Return ONLY the shoe name, nothing else. No explanation.`;
       const isLikelyStyleCode = /^[A-Z0-9]{2,}[-_]?[A-Z0-9]{2,}[-_]?[A-Z0-9]{0,}$/i.test(sneakerName.trim());
       console.log("[Sneaker Search] Input appears to be a style code:", isLikelyStyleCode);
       
+      let normalizedQuery = sneakerName.trim();
+      if (!isLikelyStyleCode) {
+        try {
+          console.log("[Sneaker Search] STEP 0: Normalizing user query with AI...");
+          const normalizePrompt = `You are a sneaker search expert. The user typed this search query: "${sneakerName}"
+
+The user may have typed a partial name, nickname, misspelling, or informal shorthand for a sneaker.
+
+Your job is to convert this into the BEST possible Google search query to find this exact sneaker on StockX or GOAT.
+
+Common patterns to handle:
+- "airmax" → "Air Max"
+- "aj1" → "Air Jordan 1"
+- "tokyo maze" → include the full name like "Nike Air Max 1 Tokyo Maze"
+- "bred 4" → "Air Jordan 4 Bred"
+- "panda dunks" → "Nike Dunk Low Black White Panda"
+- "yeezy slides" → "Adidas Yeezy Slide"
+- Missing brand names: add the likely brand (Nike, Adidas, Air Jordan, New Balance, etc.)
+- Shorthand: expand abbreviations (NB = New Balance, AJ = Air Jordan, AM = Air Max, AF1 = Air Force 1)
+- Nicknames: include both the nickname and the official colorway name if known
+
+Return ONLY the improved search query string, nothing else. No quotes, no explanation.
+If the query is already good enough, return it as-is but with proper capitalization.`;
+          
+          const normalizedResponse = await safeGenerateText({ messages: [{ role: "user", content: normalizePrompt }] });
+          if (normalizedResponse && typeof normalizedResponse === 'string' && normalizedResponse.trim().length > 0) {
+            const cleaned = normalizedResponse.trim().replace(/^["']|["']$/g, '');
+            if (cleaned.length > 0 && cleaned.length < 200 && !cleaned.toLowerCase().includes('error') && !cleaned.toLowerCase().includes('rate limit')) {
+              console.log("[Sneaker Search] Normalized query:", sneakerName, "→", cleaned);
+              normalizedQuery = cleaned;
+            }
+          }
+        } catch (normalizeError) {
+          console.error("[Sneaker Search] Query normalization failed, using original:", normalizeError);
+        }
+      }
+      
       let googleTitles: string[] = [];
       
       try {
         console.log("[Sneaker Search] STEP 1: Fetching REAL product listings from Google...");
+        console.log("[Sneaker Search] Using search query:", normalizedQuery);
         const imageData = await searchRealImageMutation.mutateAsync({
-          searchQuery: sneakerName,
+          searchQuery: normalizedQuery,
           styleCode: isLikelyStyleCode ? sneakerName : undefined
         });
         googleTitles = imageData.titles || [];
         console.log("[Sneaker Search] Got", googleTitles.length, "REAL product titles from Google");
         console.log("[Sneaker Search] Sample titles:", googleTitles.slice(0, 3));
+        
+        if (googleTitles.length === 0 && normalizedQuery !== sneakerName.trim()) {
+          console.log("[Sneaker Search] No results with normalized query, trying original...");
+          const fallbackData = await searchRealImageMutation.mutateAsync({
+            searchQuery: sneakerName.trim(),
+            styleCode: isLikelyStyleCode ? sneakerName : undefined
+          });
+          googleTitles = fallbackData.titles || [];
+          console.log("[Sneaker Search] Fallback got", googleTitles.length, "titles");
+        }
       } catch (error) {
         console.error("[Sneaker Search] Failed to fetch Google data:", error);
       }
       
       const searchPrompt = `You are a sneaker data extraction expert. Your job is to extract the CORRECT shoe information from REAL product listings.
 
-${feedbackContext ? feedbackContext + "\n" : ""}USER SEARCH: "${sneakerName}"
+${feedbackContext ? feedbackContext + "\n" : ""}USER SEARCH: "${sneakerName}"${normalizedQuery !== sneakerName.trim() ? `\nNORMALIZED SEARCH: "${normalizedQuery}"` : ""}
 ${isLikelyStyleCode ? "\n🎯 SKU/STYLE CODE MODE\nThe user entered a style code. Find the EXACT shoe for this SKU in the listings below.\n" : ""}${googleTitles.length > 0 ? `\n🔍 REAL PRODUCT LISTINGS FROM GOOGLE:\nHere are ACTUAL product page titles from StockX, GOAT, and other sneaker sites:\n\n${googleTitles.slice(0, 15).map((title, i) => `${i + 1}. ${title}`).join('\n')}\n\n⚠️ CRITICAL: The shoe name you return MUST come from these ACTUAL listings above. DO NOT make up or guess a name.\n` : "\n⚠️ WARNING: No Google data available. You must make your best guess.\n"}
 
 YOUR MISSION:
@@ -1755,7 +1803,7 @@ Return ONLY valid JSON:
                   </TouchableOpacity>
                 )}
               </View>
-              <Text style={styles.helperText}>💡 Enter exact SKU or full model name for precise search. This helps find the exact colorway!</Text>
+              <Text style={styles.helperText}>💡 Enter a SKU, full name, or even a nickname (e.g. "airmax 1 tokyo maze", "bred 4s", "panda dunks") — we'll find it!</Text>
             </View>
           )}
           
@@ -1784,7 +1832,7 @@ Return ONLY valid JSON:
               )}
             </View>
             {category === "sneaker" && (
-              <Text style={styles.helperText}>💡 Enter the shoe name (e.g. {'"'}Air Jordan 1 Chicago{'"'}) and tap ✨ to auto-fill details from major sneaker databases.</Text>
+              <Text style={styles.helperText}>💡 Type any shoe name, nickname, or shorthand and tap ✨ to auto-fill from sneaker databases.</Text>
             )}
           </View>
 
