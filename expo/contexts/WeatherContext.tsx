@@ -10,34 +10,36 @@ interface WeatherData {
   location: string;
 }
 
+const DEFAULT_LOCATION = { coords: { latitude: 40.7128, longitude: -73.9060 } };
+
 export const [WeatherProvider, useWeather] = createContextHook(() => {
   const locationQuery = useQuery({
     queryKey: ["location"],
     queryFn: async () => {
       if (Platform.OS === "web") {
         console.log("[Location] Using web geolocation API...");
-        return new Promise<{ coords: { latitude: number; longitude: number } }>((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error("Geolocation not supported on this browser"));
-            return;
-          }
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              console.log("[Location] Web location:", position.coords.latitude, position.coords.longitude);
-              resolve({
-                coords: {
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                },
-              });
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            if (!navigator.geolocation) {
+              reject(new Error("Geolocation not supported"));
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000,
+              enableHighAccuracy: false,
+            });
+          });
+          console.log("[Location] Web location:", position.coords.latitude, position.coords.longitude);
+          return {
+            coords: {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
             },
-            (error) => {
-              console.error("[Location] Web geolocation error:", error.message);
-              reject(new Error("Location permission denied"));
-            },
-            { timeout: 10000, enableHighAccuracy: false }
-          );
-        });
+          };
+        } catch (error) {
+          console.warn("[Location] Web geolocation denied, using default location");
+          return DEFAULT_LOCATION;
+        }
       }
 
       const Location = await import("expo-location");
@@ -45,8 +47,8 @@ export const [WeatherProvider, useWeather] = createContextHook(() => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       
       if (status !== "granted") {
-        console.log("[Location] Permission denied");
-        throw new Error("Location permission denied");
+        console.log("[Location] Permission denied, using default location");
+        return DEFAULT_LOCATION;
       }
       
       console.log("[Location] Getting current location...");
