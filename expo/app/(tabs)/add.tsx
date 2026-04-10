@@ -23,7 +23,7 @@ import RatingModal from "../../components/RatingModal";
 import type { FeedbackEntry } from "../../types/feedback";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
 import type { ItemCategory, WardrobeItem, Season, TopSubtype, BottomSubtype, OutfitStyle } from "../../types/wardrobe";
-import { generateText } from "@rork-ai/toolkit-sdk";
+import { safeGenerateText } from "../../utils/ai";
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -125,7 +125,7 @@ RETURN FORMAT:
 Return ONLY the shoe name, nothing else. No explanation.`;
     
     try {
-      const response = await generateText({ 
+      const response = await safeGenerateText({ 
         messages: [{ role: "user", content: verificationPrompt }] 
       });
       
@@ -482,7 +482,7 @@ Return ONLY the JSON object.`;
             await new Promise(resolve => setTimeout(resolve, waitTime));
           }
           
-          response = await generateText({ messages: [{ role: "user", content: searchPrompt }] });
+          response = await safeGenerateText({ messages: [{ role: "user", content: searchPrompt }] });
           console.log("[Sneaker Search] AI Response (Attempt " + (attempt + 1) + "):", typeof response, response?.substring?.(0, 200));
           
           if (!response || typeof response !== 'string' || response.trim().length === 0) {
@@ -1101,7 +1101,7 @@ Return ONLY valid JSON:
           console.log("[Shoe Identification] Sending request to AI vision model...");
           const startTime = Date.now();
           
-          aiResponse = await generateText({
+          aiResponse = await safeGenerateText({
             messages: [
               {
                 role: "user",

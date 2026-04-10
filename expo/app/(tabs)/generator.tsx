@@ -26,7 +26,7 @@ import RatingModal from "../../components/RatingModal";
 import type { FeedbackEntry } from "../../types/feedback";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
 import type { OutfitStyle, SavedOutfit, WardrobeItem, CalendarOutfit } from "../../types/wardrobe";
-import { generateText } from "@rork-ai/toolkit-sdk";
+import { safeGenerateText } from "../../utils/ai";
 
 const { width } = Dimensions.get("window");
 const ITEM_SIZE = (width - 64) / 2;
@@ -436,7 +436,7 @@ ${lockedContext ? "- IMPORTANT: Match new items to coordinate with the locked it
 
 Prioritize items marked with the current season.${feedbackContext}`;
 
-      const response = await generateText({
+      const response = await safeGenerateText({
         messages: [{ role: "user", content: prompt }]
       });
 
