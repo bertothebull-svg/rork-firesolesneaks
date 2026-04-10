@@ -23,7 +23,7 @@ import RatingModal from "../../components/RatingModal";
 import type { FeedbackEntry } from "../../types/feedback";
 import { COLORS, OUTFIT_STYLES } from "../../constants/styles";
 import type { ItemCategory, WardrobeItem, Season, TopSubtype, BottomSubtype, OutfitStyle } from "../../types/wardrobe";
-import { safeGenerateText } from "../../utils/ai";
+import { safeGenerateText, convertImageToBase64 } from "../../utils/ai";
 
 export default function AddItemScreen() {
   const router = useRouter();
@@ -935,40 +935,22 @@ Return ONLY the JSON object.`;
       for (let i = 0; i < imageUris.length; i++) {
         const imageUri = imageUris[i];
         console.log("[Shoe Identification] Processing image", i + 1, "of", imageUris.length);
-        console.log("[Shoe Identification] URI type:", imageUri.startsWith('file://') ? 'file://' : imageUri.startsWith('data:') ? 'data:' : imageUri.startsWith('http') ? 'http' : 'unknown');
+        console.log("[Shoe Identification] URI:", imageUri.substring(0, 80));
         
-        let base64Image = imageUri;
-        if (imageUri.startsWith('file://') || (!imageUri.startsWith('data:') && !imageUri.startsWith('http'))) {
-          console.log("[Shoe Identification] Converting file URI to base64...");
-          try {
-            const response = await fetch(imageUri);
-            console.log("[Shoe Identification] Fetch response ok:", response.ok);
-            const blob = await response.blob();
-            console.log("[Shoe Identification] Blob size:", blob.size, "type:", blob.type);
-            const reader = new FileReader();
-            base64Image = await new Promise<string>((resolve, reject) => {
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = (e) => {
-                console.error("[Shoe Identification] FileReader error:", e);
-                reject(e);
-              };
-              reader.readAsDataURL(blob);
-            });
-            console.log("[Shoe Identification] Converted to base64, length:", base64Image.length);
-            console.log("[Shoe Identification] Base64 prefix:", base64Image.substring(0, 30));
-          } catch (convError) {
-            console.error("[Shoe Identification] Error converting image", i + 1, ":", convError);
-            Alert.alert("Image Error", "Failed to process image " + (i + 1) + ". Try taking a new photo.");
+        try {
+          const base64Image = await convertImageToBase64(imageUri);
+          
+          if (!base64Image || (!base64Image.startsWith('data:image/') && !base64Image.startsWith('http'))) {
+            console.error("[Shoe Identification] Invalid image format for image", i + 1, "prefix:", base64Image?.substring(0, 30));
             continue;
           }
-        }
-
-        if (!base64Image.startsWith('data:image/')) {
-          console.error("[Shoe Identification] Invalid image format for image", i + 1);
+          
+          console.log("[Shoe Identification] Image", i + 1, "converted successfully, length:", base64Image.length);
+          base64Images.push(base64Image);
+        } catch (convError) {
+          console.error("[Shoe Identification] Error converting image", i + 1, ":", convError);
           continue;
         }
-        
-        base64Images.push(base64Image);
       }
       
       if (base64Images.length === 0) {
