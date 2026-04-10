@@ -103,24 +103,20 @@ export default function AddItemScreen() {
     console.log("[Name Verification] Current AI name:", currentName);
     console.log("[Name Verification] Verifying against Google results...");
     
-    const verificationPrompt = `You are a sneaker expert. The AI initially identified this shoe as "${currentName}" from brand "${currentBrand}"${styleCode ? ` with SKU "${styleCode}"` : ''}.
-
-However, we need to verify this is correct by checking against ACTUAL product listings from StockX and GOAT.
+    const verificationPrompt = `You are a sneaker name verifier. The AI initially identified this shoe as "${currentName}" from brand "${currentBrand}"${styleCode ? ` with SKU "${styleCode}"` : ''}.
 
 Here are the REAL page titles from Google Image Search results for the query "${searchQuery}":
 
 ${pageTitles.slice(0, 10).map((title, i) => `${i + 1}. ${title}`).join('\n')}
 
-IMPORTANT INSTRUCTIONS:
-1. Look at the ACTUAL product names in these real listings
-2. If the AI's name ("${currentName}") MATCHES or is VERY SIMILAR to what's in these listings, return it unchanged
-3. If the listings show a DIFFERENT shoe name, return the CORRECT name from the listings
-4. The SKU ${styleCode ? `"${styleCode}"` : 'in the search'} should match a specific shoe - find its EXACT name in these results
+CRITICAL: You are FORBIDDEN from inventing names. You MUST select the most accurate, complete official name EXACTLY as it appears in the provided Google page titles list. Do not alter the text.
 
-RETURN FORMAT:
-- If the AI name is correct: return exactly "${currentName}"
-- If incorrect: return the EXACT corrected shoe name from the Google results
-- Include the full official name (e.g., "Air Jordan 1 Retro High OG 'University Blue'")
+INSTRUCTIONS:
+1. Look at the ACTUAL product names in these real listings above.
+2. If the AI's name ("${currentName}") MATCHES or is VERY SIMILAR to what's in these listings, return it unchanged.
+3. If the listings show a DIFFERENT shoe name, return the CORRECT name copied EXACTLY from the listings above.
+4. The SKU ${styleCode ? `"${styleCode}"` : 'in the search'} should match a specific shoe - find its EXACT name in these results.
+5. You may ONLY return a name that exists verbatim in the list above. Do NOT paraphrase or combine names.
 
 Return ONLY the shoe name, nothing else. No explanation.`;
     
@@ -514,9 +510,8 @@ IMPORTANT:
 - Distinguish between different years/versions of same colorway
 - Provide EXACT search query for finding images
 - Include 3-5 alternative matches that could potentially match the search query
-- Return ONLY valid JSON, no additional text
 
-Return ONLY the JSON object.`;
+CRITICAL: Return ONLY a raw JSON object. Do not include markdown formatting like \`\`\`json. Do not include any conversational text before or after the JSON. Start your response with { and end with }.`;
 
       let response;
       let attempt = 0;
@@ -979,6 +974,8 @@ Return ONLY the JSON object.`;
 
 ${feedbackContext ? feedbackContext + "\n" : ""}
 
+STEP 1: Look for any visible text that resembles a Style Code or SKU (e.g., DD1391-100, 555088-134, FQ1759-100). Check the tongue tag, size tag, insole, and box label. If you find one, use that as the absolute source of truth for identifying the shoe. A Style Code uniquely identifies a sneaker - if you find it, search your knowledge for the EXACT shoe that matches that code.
+
 ${imageUris.length > 1 ? 'IMPORTANT: You have MULTIPLE images of the same shoe from different angles. Use ALL images together to get the most accurate identification. Look at all angles, surfaces, and details across all images.\n\n' : ''}YOU MUST PROVIDE:
 1. Your PRIMARY identification (most likely match)
 2. 3-5 ALTERNATIVE possible matches ranked by likelihood
@@ -1035,7 +1032,8 @@ EXAMPLES OF PROPER COLOR ANALYSIS:
 - "University Blue" = White leather base + University Blue overlays + Black Nike swoosh + White midsole + Light blue outsole
 - "Panda Dunk" = White leather toe/quarter/collar + Black leather overlays + Black swoosh + White midsole + Black outsole
 
-Return ONLY valid JSON:
+CRITICAL: Return ONLY a raw JSON object. No markdown formatting like \`\`\`json. No conversational text before or after. Start your response with { and end with }.
+
 {
   "brand": "official brand (Nike, Air Jordan, Adidas, New Balance, etc.)",
   "model": "complete official model name",
